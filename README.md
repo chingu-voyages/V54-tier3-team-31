@@ -37,5 +37,5 @@ coding!
 - Abishek Devendran #1: [GitHub](https://github.com/abishekdevendran) / [LinkedIn](https://www.linkedin.com/in/abishekdevendran)
 - Jericho Serrano #2: [GitHub](https://github.com/jericho1050) / [LinkedIn](https://www.linkedin.com/in/jericho-wenzel-serrano-b6b9a22a3/)
 - Win Win Khaing (Thea) #3: [GitHub](https://github.com/TheaWin) / [LinkedIn](https://www.linkedin.com/in/thea-win)
-- Sophie Jiang #4: [GitHub](https://github.com/sophiejiang) / [LinkedIn](www.linkedin.com/in/hello-sophiejiang)
+- Sophie Jiang #4: [GitHub](https://github.com/sophiejiang) / [LinkedIn](https://www.linkedin.com/in/hello-sophiejiang)
 - Teammate name #n: [GitHub](https://github.com/ghaccountname) / [LinkedIn](https://linkedin.com/in/liaccountname)
