@@ -1,29 +1,31 @@
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { Pool } from '@neondatabase/serverless';
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
 import { users, habits, habitLogs } from './schema';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 // Make sure to use environment variables for the database URL
-const databaseUrl = process.env.DATABASE_URL;
+let databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error('DATABASE_URL environment variable is required');
 }
+// databaseUrl=databaseUrl.replace('-pooler', '');
+// console.log('databaseUrl:', databaseUrl);
 
 async function main() {
   console.log('Seeding database...');
 
   // Create the connection
-  const pool = new Pool({ connectionString: databaseUrl });
-  const db = drizzle(pool);
+  const pool = neon(process.env.DATABASE_URL!);
+  const db = drizzle({ client: pool });
 
   // Clear existing data (optional - remove if you don't want to clear tables first)
   console.log('Clearing existing data...');
   await db.delete(habitLogs);
   await db.delete(habits);
-  await db.delete(users);
+  // await db.delete(users);
 
   // Seed users
   console.log('Creating users...');
@@ -41,6 +43,7 @@ async function main() {
       image: 'https://randomuser.me/api/portraits',
     }
   ]).returning();
+  console.log('usersResp:', usersResp);
 
   // Seed habits
   console.log('Creating habits...');
@@ -95,7 +98,6 @@ async function main() {
   ]);
 
   console.log('Database seeded successfully!');
-  await pool.end();
   process.exit(0);
 }
 

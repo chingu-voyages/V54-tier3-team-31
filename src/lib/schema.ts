@@ -124,8 +124,6 @@ export const habitLogs = pgTable('habit_log', {
 
 // Relations
 export const userRelations = relations(users, ({ many, one }) => ({
-  accounts: many(accounts),
-  sessions: many(sessions),
   habits: many(habits),
   habitLogs: many(habitLogs),
 }));
