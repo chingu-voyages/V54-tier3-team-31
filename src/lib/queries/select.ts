@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { habit, users } from '../schema';
+import { habits, users } from '../schema';
 
 export async function getUsers() {
     const usersRes = await db.select().from(users)
@@ -7,6 +7,6 @@ export async function getUsers() {
 }
 
 export async function getHabits() {
-    const habits = await db.select().from(habit);
-    return habits;
+    const habitsRes = await db.select().from(habits);
+    return habitsRes;
 }
