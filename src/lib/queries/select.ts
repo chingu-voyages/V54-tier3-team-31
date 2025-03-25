@@ -1,9 +1,9 @@
 import { db } from '../db';
-import { habit, user } from '../drizzle';
+import { habit, users } from '../schema';
 
 export async function getUsers() {
-    const users = await db.select().from(user)
-    return users;
+    const usersRes = await db.select().from(users)
+    return usersRes;
 }
 
 export async function getHabits() {
