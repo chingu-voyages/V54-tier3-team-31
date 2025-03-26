@@ -1,1 +1,0 @@
-ALTER TABLE "habit_log" DROP COLUMN "notes";

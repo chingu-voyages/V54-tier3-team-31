@@ -123,7 +123,7 @@ export const habitLogs = pgTable('habit_log', {
 });
 
 // Relations
-export const userRelations = relations(users, ({ many, one }) => ({
+export const userRelations = relations(users, ({ many }) => ({
   habits: many(habits),
   habitLogs: many(habitLogs),
 }));
@@ -136,7 +136,7 @@ export const habitRelations = relations(habits, ({ many, one }) => ({
   habitLogs: many(habitLogs),
 }));
 
-export const habitLogRelations = relations(habitLogs, ({ many, one }) => ({
+export const habitLogRelations = relations(habitLogs, ({ one }) => ({
   user: one(users, {
     fields: [habitLogs.userId],
     references: [users.id],
