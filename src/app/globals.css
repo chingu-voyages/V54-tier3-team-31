@@ -100,7 +100,7 @@
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
+  --background: rgba(23, 23, 23, 1);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
   --card-foreground: oklch(0.984 0.003 247.858);
@@ -140,4 +140,15 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@utility bg-navbar {
+  background: radial-gradient(90.16% 143.01% at 15.32% 21.04%, rgba(121, 121, 121, 0.1) 0%, rgba(101, 101, 101, 0.1) 77.08%, rgba(197, 197, 197, 0.075) 100%) /* warning: gradient uses a rotation that is not supported by CSS and may not behave as expected */;
+  backdrop-filter: blur(80px)
+
+}
+
+
+html {
+  box-sizing: border-box;
 }

@@ -2,6 +2,8 @@
 
 import React, { ReactNode } from "react";
 import Task from "./task";
+import { MoreHorizontal, Plus } from "lucide-react";
+import { Button } from "../ui/button";
 
 interface GoalProps {
   title: string;
@@ -22,12 +24,14 @@ const Goal: React.FC<GoalProps> = ({
   bestTimeDescription,
 }) => {
   return (
-    <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-border pb-4">
-      <div className="flex w-full items-center text-xl text-foreground font-semibold mb-2 justify-between">
+    <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+      <div className="flex w-full items-center text-xl font-semibold mb-4 justify-between">
         <div>{title}</div>
-        <div className="text-muted-foreground">⋯</div>
+        <button className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+          <MoreHorizontal size={20} />
+        </button>
       </div>
-      <div className="w-full">
+      <div className="w-full space-y-1">
         {tasks.map((task, index) => (
           <Task
             key={index}
@@ -37,16 +41,18 @@ const Goal: React.FC<GoalProps> = ({
           />
         ))}
       </div>
-      <div className="flex items-center gap-1.5 text-sm text-foreground font-medium my-2">
-        <span className="text-sm text-muted-foreground">+</span>
-        <div className="text-muted-foreground">add</div>
-      </div>
-      <div className="items-stretch bg-muted flex w-full flex-col text-sm justify-center p-3 rounded-md">
+      <Button variant="ghost" className="flex items-center gap-2 my-4 py-3" >
+            <Plus />
+            <span className="text-sm font-medium">Add</span>
+            <div className="flex-grow"></div>
+            <span className="text-zinc-400">⋯</span>
+      </Button>
+      <div className="items-stretch bg-zinc-100 dark:bg-neutral-800 border border-zinc-200 dark:border-zinc-800 flex w-full flex-col text-sm justify-center p-3 rounded-md">
         <div className="w-full">
-          <div className="text-foreground font-medium leading-none">
+          <div className="font-medium leading-none text-zinc-900 dark:text-white">
             {bestTimeTitle}
           </div>
-          <div className="text-muted-foreground font-normal leading-5 mt-1">
+          <div className="text-zinc-600 dark:text-zinc-400 font-normal leading-5 mt-1">
             {bestTimeDescription}
           </div>
         </div>

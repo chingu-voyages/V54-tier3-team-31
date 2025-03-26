@@ -1,7 +1,11 @@
+"use client"
+
 import React from "react";
 import Goal from "./goal";
 import NavigationMenu from "./navigation-menu";
+import DesktopNav from "../navigation/desktop-nav";
 import { WandSparkles, Plus } from "lucide-react";
+import { Button } from "../ui/button";
 
 const Plans: React.FC = () => {
   // Exercise goal tasks
@@ -43,21 +47,30 @@ const Plans: React.FC = () => {
   ];
 
   return (
-    <div className="bg-background min-h-screen flex flex-col">
-      {/* Status bar - This would be handled by the device */}
+    <div className="min-h-screen flex flex-col">
+      {/* Desktop Navigation */}
+      <DesktopNav />
       
       {/* Main container */}
-      <div className="flex flex-col flex-1 pb-16">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background pt-4 pb-3 px-4 flex items-center justify-between border-b border-border">
-          <h1 className="text-2xl font-semibold text-foreground">Plans</h1>
-          <button className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+      <div className="flex flex-col flex-1 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full md:pt-8">
+        {/* Mobile Header - Hidden on desktop */}
+        <div className="sticky top-0 z-10 pt-4 pb-3 px-4 flex items-center justify-between border-b border-zinc-800 md:hidden">
+          <h1 className="text-2xl font-semibold">Plans</h1>
+          <Button className="w-8 h-8 rounded-full flex items-center justify-center">
             <Plus size={16} />
-          </button>
+          </Button>
+        </div>
+        
+        {/* Desktop Header - Hidden on mobile */}
+        <div className="hidden md:flex items-center justify-between mb-6 px-4">
+          <h1 className="text-2xl font-semibold">Plans</h1>
+          <Button className="w-8 h-8 rounded-full flex items-center justify-center">
+            <Plus size={16} />
+          </Button>
         </div>
         
         {/* Content */}
-        <div className="flex flex-col px-4 pt-2">
+        <div className="flex flex-col px-4">
           <Goal
             title="Exercise to Get Healthier"
             tasks={exerciseTasks}
@@ -71,18 +84,21 @@ const Plans: React.FC = () => {
             bestTimeTitle="Best Time"
             bestTimeDescription="30 minutes before bed."
           />
-
-          <div className="flex items-center gap-2 mt-4 py-3">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground border border-border">+</div>
-            <span className="text-muted-foreground text-sm font-medium">Add a Task</span>
-            <div className="flex-grow"></div>
-            <span className="text-muted-foreground">⋯</span>
+          
+          {/* Add a Task button - visible on larger screens */}
+          <div className="hidden md:flex mt-8 mb-4 items-center gap-2">
+            <Button className="rounded-full border-zinc-700 transition-colors">
+            <Plus size={16} />
+            </Button>
+              <span className="font-medium">Add a Task</span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Bar */}
-      <NavigationMenu />
+      {/* Mobile Navigation Bar - Hidden on desktop */}
+      <div className="md:hidden">
+        <NavigationMenu />
+      </div>
     </div>
   );
 };
