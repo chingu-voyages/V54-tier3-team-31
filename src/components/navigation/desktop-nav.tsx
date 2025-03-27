@@ -8,6 +8,11 @@ import { usePathname } from "next/navigation";
 
 const DesktopNav: React.FC = () => {
   const pathname = usePathname();
+  
+  if (pathname === "/") {
+    // don't render it base
+    return;
+  }
 
   return (
     <nav className="hidden md:flex w-full border-b border-zinc-800 bg-navbar">
