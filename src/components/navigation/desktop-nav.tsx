@@ -1,10 +1,19 @@
-"use client"
+'use client'
 
-import React from "react";
-import Link from "next/link";
-import { StretchHorizontal, StretchHorizontalIcon, Star, StarIcon, LineChart, LineChartIcon, User, UserIcon } from "lucide-react";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
+import React from 'react'
+import Link from 'next/link'
+import {
+    StretchHorizontal,
+    StretchHorizontalIcon,
+    Star,
+    StarIcon,
+    User,
+    UserIcon,
+    LineChart,
+    LineChartIcon
+} from 'lucide-react'
+import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 
 const DesktopNav: React.FC = () => {
   const pathname = usePathname();
@@ -78,4 +87,4 @@ const DesktopNav: React.FC = () => {
   );
 };
 
-export default DesktopNav;
+export default DesktopNav
