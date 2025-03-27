@@ -17,6 +17,11 @@ import { usePathname } from 'next/navigation'
 const NavigationMenu: React.FC = () => {
     const pathname = usePathname()
 
+    if (pathname === "/") {
+        // don't render it in base
+        return;
+    }
+
     return (
         <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-navbar flex justify-around items-center py-3 px-4">
             <div className="flex flex-col items-center hover:cursor-pointer">

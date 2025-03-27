@@ -2,8 +2,6 @@
 
 import React from 'react'
 import Goal from './goal'
-import NavigationMenu from '../navigation/navigation-menu'
-import DesktopNav from '../navigation/desktop-nav'
 import { WandSparkles, Plus } from 'lucide-react'
 import { Button } from '../ui/button'
 
@@ -48,8 +46,6 @@ const Plans: React.FC = () => {
 
     return (
         <div className="min-h-screen flex flex-col">
-            {/* Desktop Navigation */}
-            <DesktopNav />
 
             {/* Main container */}
             <div className="flex flex-col flex-1 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full md:pt-8">
@@ -93,11 +89,6 @@ const Plans: React.FC = () => {
                         <span className="font-medium">Add a Task</span>
                     </div>
                 </div>
-            </div>
-
-            {/* Mobile Navigation Bar - Hidden on desktop */}
-            <div className="md:hidden">
-                <NavigationMenu />
             </div>
         </div>
     )
