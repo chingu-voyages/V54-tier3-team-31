@@ -7,8 +7,6 @@ import {
     StretchHorizontalIcon,
     Star,
     StarIcon,
-    LineChart,
-    LineChartIcon,
     User,
     UserIcon,
     Sprout,
