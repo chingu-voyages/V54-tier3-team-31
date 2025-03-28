@@ -56,7 +56,7 @@ const Plans: React.FC = () => {
     const dropDownActions = [
         {
             name: 'Add a Task',
-            href: '/add-tasks',
+            href: null,
         },
         {
             name: 'Add a Goal and Tasks',
@@ -77,15 +77,19 @@ const Plans: React.FC = () => {
                         <Plus size={16} className="md:w-5 md:h-5" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align='end'>
+                <DropdownMenuContent align="end">
                     {dropDownActions.map((item) => (
                         <DropdownMenuItem key={item.name}>
-                            <Link
-                                href={item.href}
-                                className={`flex w-full items-center ${pathname === item.href ? 'bg-muted' : ''}`}
-                            >
-                                {item.name}
-                            </Link>
+                            {item.href ? (
+                                <Link
+                                    href={item.href}
+                                    className={`flex w-full items-center ${pathname === item.href ? 'bg-muted' : ''}`}
+                                >
+                                    {item.name}
+                                </Link>
+                            ) : (
+                                <Button variant='ghost' className='p-0 m-0 h-auto'>{item.name}</Button>
+                            )}
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>
