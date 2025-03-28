@@ -30,7 +30,7 @@ const Goal: React.FC<GoalProps> = ({
             <div className="flex w-full items-center text-xl font-semibold mb-4 justify-between">
                 <div>{title}</div>
                 <ActionDropdown iconSize={32}>
-                    <DropdownMenuItem className="text-destructive flex items-center text-sm p-3 d font-medium ">
+                    <DropdownMenuItem className="text-destructive flex items-center text-sm p-3 font-medium ">
                         <Trash className="mr-2 h-4 w-4 text-red-400" />
                         Delete
                     </DropdownMenuItem>

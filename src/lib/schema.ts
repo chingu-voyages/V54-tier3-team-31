@@ -180,5 +180,6 @@ export const taskRelations = relations(tasks, ({ one }) => ({
 export type User = typeof users.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+export type Goal = typeof goals.$inferSelect; // Renamed type
 export type Task = typeof tasks.$inferSelect;
-export type GoalLog = typeof goalLogs.$inferSelect; 
+export type GoalLog = typeof goalLogs.$inferSelect;
