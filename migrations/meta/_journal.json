@@ -8,6 +8,13 @@
       "when": 1742926708922,
       "tag": "0000_even_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1743200514483,
+      "tag": "0001_closed_loa",
+      "breakpoints": true
     }
   ]
 }
