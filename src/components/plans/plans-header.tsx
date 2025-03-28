@@ -34,7 +34,7 @@ export const PlansHeader: React.FC<PlansHeaderProps> = ({ className = '' }) => {
             href: '/add-goal-and-tasks',
         },
         {
-            name: 'Add Plans Bassed on My Goal',
+            name: 'Add Plans Based on My Goal',
             href: '/add-plans-ai',
         },
     ]
