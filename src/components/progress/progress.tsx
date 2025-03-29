@@ -1,6 +1,8 @@
 'use client'
 
 import React from 'react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 // import { useState } from 'react'
 
 const Progress: React.FC = () => {
@@ -15,12 +17,24 @@ const Progress: React.FC = () => {
             <div className="items-center mb-4 px-4">
                 <h2 className="text-xl font-semibold">Productivity Trend</h2>
                 {/* Toggle Button - Weekly/Monthly */}
-                <div className="mt-2 flex gap-2">
-                    <div>Weekly</div>
-                    <div>Monthly</div>
-                </div>
-                {/* Heatmap */}
-                <div className="mt-4 border-neutral-700 border-1 p-4 rounded-md h-40 flex items-center justify-center"></div>
+                <Tabs defaultValue="weekly" className="w-full mt-4">
+                    <TabsList className="flex w-[161px] h-[42px]">
+                        <TabsTrigger
+                            value="weekly"
+                            className="flex-1 w-[73px] h-[32px] flex items-center justify-center"
+                        >
+                            Weekly
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="monthly"
+                            className="flex-1 w-[73px] h-[32px] flex items-center justify-center"
+                        >
+                            Monthly
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="weekly">Weekly heatmap</TabsContent>
+                    <TabsContent value="monthly">Monthly heatmap</TabsContent>
+                </Tabs>
             </div>
 
             {/* Completion List */}
