@@ -101,8 +101,6 @@ export const goals = pgTable('goal', {
     id: serial('id').primaryKey(),
     name: text('name').notNull(),
     description: text('description'),
-    bestTimeTitle: text('best_time_title'),
-    bestTimeDescription: text('best_time_description'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     startDate: timestamp('start_date'),
@@ -137,15 +135,14 @@ export const userRelations = relations(users, ({ many }) => ({
 }))
 
 export const goalRelations = relations(goals, ({ many, one }) => ({
+    // Renamed relation
     user: one(users, {
         fields: [goals.userId],
         references: [users.id],
     }),
     tasks: many(tasks),
-    // Removed goalLogs relation
 }))
 
-// Removed goalLogRelations definition
 
 export const taskRelations = relations(tasks, ({ one }) => ({
     goal: one(goals, {
