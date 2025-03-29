@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { saveTasksToLocal, getAllPLanTasksFromLocal } from '@/lib/localforage'
 import { Task as TaskSchema} from '@/lib/schema'
-
 // Zod schema for the new goal form
 const TaskFormSchema = z.object({
     title: z.string().min(1, {
@@ -123,12 +122,13 @@ const Plans: React.FC = () => {
         // Create a complete task object with all required properties
         const newTask = {
             ...values,
+            userId: nanoid(),
             id: Date.now(), // Generate a unique ID
             difficulty: null,
             description: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            goalId: 0, // Default goal ID or appropriate value
+            goalId: 0, // Default goal ID or approplkjjjriate value
             completed: false
         };
         
