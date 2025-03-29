@@ -15,6 +15,13 @@
       "when": 1743200514483,
       "tag": "0001_closed_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1743260404599,
+      "tag": "0002_fast_blink",
+      "breakpoints": true
     }
   ]
 }
