@@ -54,8 +54,8 @@ async function main() {
       frequency: 'daily',
       startDate: new Date(),
       // Add bestTime fields if applicable at the goal level
-      // bestTimeTitle: 'Best Time for Goal',
-      // bestTimeDescription: 'Description for goal best time',
+      bestTimeTitle: 'Best Time for Goal',
+      bestTimeDescription: 'Description for goal best time',
     },
     {
       name: 'Sleep Early',
@@ -63,8 +63,8 @@ async function main() {
       userId: usersResp[0].id,
       frequency: 'daily',
       startDate: new Date(),
-      // bestTimeTitle: 'Best Time for Sleep Goal',
-      // bestTimeDescription: '30 minutes before bed.',
+      bestTimeTitle: 'Best Time for Sleep Goal',
+      bestTimeDescription: '30 minutes before bed.',
     },
     {
       name: 'Learn Drizzle ORM',
@@ -79,11 +79,12 @@ async function main() {
   // Seed tasks for each goal
   console.log('Creating tasks...');
   await db.insert(tasks).values([
-    // Tasks for Goal 1: Exercise
+    // Tasks for Goal 1: Exercise (User 1)
     {
       title: 'Stretch (neck, shoulders, back)',
       difficulty: 'Simpler',
       goalId: goalsResp[0].id,
+      userId: usersResp[0].id, // Add userId
       frequency: 'Once',
       duration: '5 mins',
       completed: false,
@@ -93,15 +94,17 @@ async function main() {
       title: '10 push-ups, squats, or jumping jacks',
       difficulty: 'Simpler',
       goalId: goalsResp[0].id,
+      userId: usersResp[0].id, // Add userId
       frequency: 'Daily',
       duration: '2 mins',
       completed: false,
     },
-    // Tasks for Goal 2: Sleep Early
+    // Tasks for Goal 2: Sleep Early (User 1)
     {
       title: 'Dim lights, activate night mode',
       difficulty: 'Simpler',
       goalId: goalsResp[1].id,
+      userId: usersResp[0].id, // Add userId
       frequency: 'Daily',
       duration: '1 min',
       completed: false,
@@ -110,16 +113,18 @@ async function main() {
       title: 'Write one sentence about your day',
       difficulty: 'Simpler',
       goalId: goalsResp[1].id,
+      userId: usersResp[0].id, // Add userId
       frequency: 'Daily',
       duration: '3 mins',
       completed: false,
       description: 'Reflect briefly on the day.',
     },
-    // Tasks for Goal 3: Learn Drizgzle
+    // Tasks for Goal 3: Learn Drizzle (User 2)
     {
       title: 'Read Drizzle documentation for 30 mins',
       difficulty: 'Medium',
       goalId: goalsResp[2].id,
+      userId: usersResp[1].id, // Add userId
       frequency: 'Weekly',
       duration: '30 mins',
       completed: false,
@@ -128,10 +133,22 @@ async function main() {
       title: 'Try a Drizzle query example',
       difficulty: 'Medium',
       goalId: goalsResp[2].id,
+      userId: usersResp[1].id, // Add userId
       frequency: 'Once',
       duration: '15 mins',
       completed: false,
     },
+    // Example of a task not linked to a goal (Plan task for User 1)
+    {
+        title: 'Review weekly plan',
+        difficulty: 'Simpler',
+        goalId: null, // No goalId
+        userId: usersResp[0].id, // Directly linked to user
+        frequency: 'Weekly',
+        duration: '10 mins',
+        completed: false,
+        description: 'Check progress on weekly tasks.',
+    }
   ]);
   console.log('Tasks created.');
 
