@@ -101,6 +101,8 @@ export const goals = pgTable('goal', {
     id: serial('id').primaryKey(),
     name: text('name').notNull(),
     description: text('description'),
+    bestTimeTitle: text('best_time_title'),
+    bestTimeDescription: text('best_time_description'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     startDate: timestamp('start_date'),
@@ -120,8 +122,8 @@ export const tasks = pgTable('task', {
     goalId: integer('goal_id')
         .references(() => goals.id, { onDelete: 'cascade' })
         .notNull(),
-    bestTimeTitle: text('best_time_title'),
-    bestTimeDescription: text('best_time_description'),
+    frequency: text('frequency'), // Added frequency
+    duration: text('duration'), // Added duration (e.g., '5 mins')
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     completed: boolean('completed').default(false), // Keep completion status on the task itself
