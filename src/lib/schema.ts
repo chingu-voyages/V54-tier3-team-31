@@ -119,8 +119,10 @@ export const tasks = pgTable('task', {
     id: serial('id').primaryKey(),
     title: text('title').notNull(),
     difficulty: text('difficulty'), // e.g., 'Simpler', 'Medium', 'Hard'
-    goalId: integer('goal_id')
-        .references(() => goals.id, { onDelete: 'cascade' })
+    goalId: integer('goal_id') // Make goalId nullable
+        .references(() => goals.id, { onDelete: 'set null' }), // Set null on goal deletion
+    userId: text('user_id') // Add userId, referencing users table, this indicates that a task is a planTask
+        .references(() => users.id, { onDelete: 'cascade' }) // Cascade delete tasks on user deletion
         .notNull(),
     frequency: text('frequency'), // Added frequency
     duration: text('duration'), // Added duration (e.g., '5 mins')
@@ -133,7 +135,7 @@ export const tasks = pgTable('task', {
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
     goals: many(goals),
-    // Removed goalLogs relation
+    tasks: many(tasks),
 }))
 
 export const goalRelations = relations(goals, ({ many, one }) => ({
@@ -151,6 +153,10 @@ export const taskRelations = relations(tasks, ({ one }) => ({
     goal: one(goals, {
         fields: [tasks.goalId],
         references: [goals.id],
+    }),
+    user: one(users, { // Add relation from task to its user
+        fields: [tasks.userId],
+        references: [users.id],
     }),
 }))
 
