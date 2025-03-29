@@ -98,12 +98,9 @@ export const authenticators = pgTable(
 )
 
 export const goals = pgTable('goal', {
-    // Renamed table
     id: serial('id').primaryKey(),
-    name: text('name').notNull(), // Renamed from title to name for consistency
+    name: text('name').notNull(),
     description: text('description'),
-    bestTimeTitle: text('best_time_title'),
-    bestTimeDescription: text('best_time_description'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     startDate: timestamp('start_date'),
@@ -114,60 +111,39 @@ export const goals = pgTable('goal', {
         .notNull(),
 })
 
-export const goalLogs = pgTable('goal_log', {
-    // Renamed table
-    id: serial('id').primaryKey(),
-    date: timestamp('date').notNull(),
-    completed: boolean('completed').default(false),
-    description: text('description'),
-    goalId: integer('goal_id') // Renamed foreign key column
-        .references(() => goals.id, { onDelete: 'cascade' }) // Updated reference
-        .notNull(),
-    userId: text('user_id')
-        .references(() => users.id)
-        .notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-})
+// Removed goalLogs table definition
 
 export const tasks = pgTable('task', {
     id: serial('id').primaryKey(),
     title: text('title').notNull(),
     difficulty: text('difficulty'), // e.g., 'Simpler', 'Medium', 'Hard'
-    goalId: integer('goal_id') // Renamed foreign key column
-        .references(() => goals.id, { onDelete: 'cascade' }) // Updated reference
+    goalId: integer('goal_id')
+        .references(() => goals.id, { onDelete: 'cascade' })
         .notNull(),
+    bestTimeTitle: text('best_time_title'),
+    bestTimeDescription: text('best_time_description'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    completed: boolean('completed').default(false), // Keep completion status on the task itself
+    description: text('description'),
 })
 
 // Relations
 export const userRelations = relations(users, ({ many }) => ({
     goals: many(goals),
-    goalLogs: many(goalLogs),
+    // Removed goalLogs relation
 }))
 
 export const goalRelations = relations(goals, ({ many, one }) => ({
-    // Renamed relation
     user: one(users, {
         fields: [goals.userId],
         references: [users.id],
     }),
     tasks: many(tasks),
-    goalLogs: many(goalLogs), // Updated relation name
+    // Removed goalLogs relation
 }))
 
-export const goalLogRelations = relations(goalLogs, ({ one }) => ({
-    // Renamed relation
-    user: one(users, {
-        fields: [goalLogs.userId],
-        references: [users.id],
-    }),
-    goal: one(goals, {
-        // Updated relation name
-        fields: [goalLogs.goalId], // Updated field name
-        references: [goals.id],
-    }),
-}))
+// Removed goalLogRelations definition
 
 export const taskRelations = relations(tasks, ({ one }) => ({
     goal: one(goals, {
@@ -177,9 +153,8 @@ export const taskRelations = relations(tasks, ({ one }) => ({
 }))
 
 // Types
-export type User = typeof users.$inferSelect;
-export type Account = typeof accounts.$inferSelect;
-export type Session = typeof sessions.$inferSelect;
-export type Goal = typeof goals.$inferSelect; // Renamed type
-export type Task = typeof tasks.$inferSelect;
-export type GoalLog = typeof goalLogs.$inferSelect;
+export type User = typeof users.$inferSelect
+export type Account = typeof accounts.$inferSelect
+export type Session = typeof sessions.$inferSelect
+export type Goal = typeof goals.$inferSelect
+export type Task = typeof tasks.$inferSelect
