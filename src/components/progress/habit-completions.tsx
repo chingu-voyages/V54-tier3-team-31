@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, CircleCheck, Circle, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, CircleCheck, MoreHorizontal } from 'lucide-react'
 
 interface HabitCompletionsProps {
     title: string
