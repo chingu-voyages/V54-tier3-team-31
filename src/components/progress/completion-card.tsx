@@ -24,7 +24,7 @@ const CompletionCard: React.FC<CompletionCardProps> = ({
 }) => {
     return (
         <div onClick={onClick}>
-            <Card className="mt-4 px-6 py-3 flex justify-between bg-neutral-800 rounded-md border-0 w-full md:w-[670px] min-h-[94px]">
+            <Card className="mt-4 px-6 py-3 flex justify-between bg-neutral-800 rounded-md w-full md:w-[670px] min-h-[94px] hover:cursor-pointer">
                 <span>{title}</span>
                 <h2 className="text-3xl font-semibold">{count}</h2>
             </Card>
