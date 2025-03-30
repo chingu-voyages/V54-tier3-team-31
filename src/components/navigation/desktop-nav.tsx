@@ -32,7 +32,7 @@ const DesktopNav: React.FC = () => {
                 >
                     <div className="text-white font-bold text-xl flex">
                         <Image
-                            src="symbol.svg"
+                            src="Logo.svg"
                             alt="logo circle"
                             width={20}
                             height={20}

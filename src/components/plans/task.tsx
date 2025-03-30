@@ -12,21 +12,25 @@ import {
 import ActionDropdown from '../ui/action-dropdown'
 
 interface TaskProps {
+    id: number,
     title: string
     // Add props for frequency and duration if they need to be dynamic
     frequency?: string | null // e.g., 'Once', 'Daily'
     duration?: string | null // e.g., '5 mins', '15 mins'
     // Add callback functions to handle selection changes
-    onFrequencyChange?: (newFrequency: string) => void
-    onDurationChange?: (newDuration: string) => void
+    onFrequencyChange?: (newFrequency: string) => void,
+    onDurationChange?: (newDuration: string) => void,
+    onDeleteTaskClick: (taskId: number) => void,
 }
 
 const Task: React.FC<TaskProps> = ({
+    id,
     title,
     frequency = 'Once', // Default value
     duration = '5 mins', // Default value
     onFrequencyChange,
     onDurationChange,
+    onDeleteTaskClick,
 }) => {
     const frequencyOptions = ['Once', 'Daily', 'Weekly', 'Monthly']
     const durationOptions = [
@@ -103,7 +107,7 @@ const Task: React.FC<TaskProps> = ({
                         <div>Simpler</div>
                     </Button>
                     <ActionDropdown iconSize={16}>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem className="text-destructive" onClick={() => onDeleteTaskClick(id)}>
                             <Trash className="mr-2 h-4 w-4 text-red-400" />
                             Delete
                         </DropdownMenuItem>

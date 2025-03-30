@@ -25,8 +25,12 @@ import {
     DropdownMenuTrigger,
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { saveTasksToLocal, getAllPLanTasksFromLocal } from '@/lib/localforage'
-import { Task as TaskSchema} from '@/lib/schema'
+import {
+    saveTasksToLocal,
+    getAllPLanTasksFromLocal,
+    removeTaskFromLocal,
+} from '@/lib/localforage'
+import { Task as TaskSchema } from '@/lib/schema'
 // Zod schema for the new goal form
 const TaskFormSchema = z.object({
     title: z.string().min(1, {
@@ -115,41 +119,47 @@ const Plans: React.FC = () => {
         form.reset() // Reset form when opening
     }
 
+    const handleDeleteTaskClick = (taskId: number) => {
+        const newPlanTasks = planTasks.filter((t) => t.id !== taskId)
+        setPlanTasks(newPlanTasks)
+        removeTaskFromLocal(taskId)
+    }
+
     function onSubmit(values: z.infer<typeof TaskFormSchema>) {
         // User hits enter then we need to persist those inputted values
-        console.log('New Goal:', values);
-        
+        console.log('New Task:', values)
+
         // Create a complete task object with all required properties
-        const newTask = {
+        // Date.now() provides a number based on milliseconds since epoch,
+        // offering high practical uniqueness for client-side generation.
+        const newTask: TaskSchema = {
             ...values,
-            userId: nanoid(),
-            id: Date.now(), // Generate a unique ID
+            userId: nanoid(), // Keep nanoid for userId if it's suitable there
+            id: Date.now(), // Use timestamp for a practically unique numeric ID
             difficulty: null,
             description: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            goalId: 0, // Default goal ID or approplkjjjriate value
-            completed: false
-        };
-        
-        setPlanTasks((prev) => [newTask, ...prev]);
-        setIsAddingTasks(false);
-        saveTasksToLocal([...planTasks, newTask])
+            goalId: 0, // Default goal ID or appropriate value
+            completed: false,
+        }
+
+        // Update state immediately for UI responsiveness
+        const updatedTasks = [newTask, ...planTasks]
+        setPlanTasks(updatedTasks)
+        setIsAddingTasks(false)
+        // Save the updated list to local storage
+        saveTasksToLocal(updatedTasks)
         form.reset()
     }
     // --- End Form Setup & Handlers ---
 
-    useEffect(()=> {
+    useEffect(() => {
         const localPlanTasks = async () => {
-
-         const planTasks = await getAllPLanTasksFromLocal();
-         setPlanTasks(planTasks);
-
+            const planTasks = await getAllPLanTasksFromLocal()
+            setPlanTasks(planTasks)
         }
         localPlanTasks()
-
-        
-        
     }, [])
 
     return (
@@ -194,7 +204,7 @@ const Plans: React.FC = () => {
                                                     </div>
                                                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
                                                         <div className="flex items-center gap-4">
-                                                            {' '}   
+                                                            {' '}
                                                             {/* Added gap */}
                                                             {/* --- Frequency Dropdown --- */}
                                                             <FormField
@@ -309,7 +319,7 @@ const Plans: React.FC = () => {
                                                                     setIsAddingTasks(
                                                                         false
                                                                     )
-                                                                } // Close form on delete/cancel
+                                                                } // Close form on cancel
                                                             >
                                                                 <Trash className="mr-2 h-4 w-4 text-red-400" />
                                                                 Cancel
@@ -331,14 +341,14 @@ const Plans: React.FC = () => {
                     )}
                     {/* --- End New Task Form --- */}
                     {planTasks.map((planTask) => (
-                        <Task key={nanoid()} {...planTask} />
+                        <Task
+                            key={nanoid()}
+                            {...planTask}
+                            onDeleteTaskClick={handleDeleteTaskClick}
+                        />
                     ))}
                     {goals.map((goal) => (
-                        <Goal
-                            key={goal.id}
-                            {...goal}
-
-                        />
+                        <Goal key={goal.id} {...goal} />
                     ))}
 
                     {/* Add a Task button - visible on larger screens */}

@@ -37,11 +37,6 @@ export const saveGoalToLocal = async (
     tasks: schema.Task[]
 ): Promise<void> => {
     ensureLocalForageConfigured() // Ensure config before use
-    if (typeof window === 'undefined') {
-        // This check might be redundant now but kept for safety
-        console.warn('Attempted to save goal to localForage on the server.')
-        return // Don't run on server
-    }
     try {
         await localforage.setItem(`goal-${goal.id}`, goal)
         for (const task of tasks) {
@@ -77,15 +72,11 @@ export const getAllPLanTasksFromLocal = async (): Promise<schema.Task[]> => {
 }
 export const saveTasksToLocal = async (tasks: schema.Task[]): Promise<void> => {
     ensureLocalForageConfigured() // Ensure config before use
-    if (typeof window === 'undefined') {
-        console.warn('Attempted to save tasks to localForage on the server.')
-        return // Don't run on server
-    }
     try {
         // Generate a single key for the list of planned tasks for easier retrieval/management if needed
         // Using a fixed key might be better if you always want to overwrite the same list
         const planKey = `plan-tasks-all`
-        await localforage.setItem(planKey, tasks) // Save the array itselflkjj
+        await localforage.setItem(planKey, tasks) // Save the array itself
 
         console.log(`Planned tasks saved locally under key ${planKey}.`)
     } catch (err) {
@@ -100,6 +91,35 @@ export const saveTasksToLocal = async (tasks: schema.Task[]): Promise<void> => {
         }
     }
 }
+
+export const removeTaskFromLocal = async (taskId: number): Promise<void> => {
+    ensureLocalForageConfigured(); // Ensure config before use
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to remove task from localForage on the server.');
+        return; // Don't run on server
+    }
+    try {
+        const allPlanTasks = await getAllPLanTasksFromLocal();
+        const updatedPlanTasks = allPlanTasks.filter(task => task.id !== taskId);
+        // Only save back if the list actually changed
+        if (updatedPlanTasks.length !== allPlanTasks.length) {
+            
+            await saveTasksToLocal(updatedPlanTasks);
+            console.log(`Task ${taskId} removed from the 'plan-tasks-all' list.`);
+        }
+
+    } catch (err) {
+        console.error(`Error removing task ${taskId} from localForage:`, err);
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            );
+        }
+    }
+};
 
 export const getAllGoalsFromLocal = async (): Promise<{
     goals: schema.Goal[]
