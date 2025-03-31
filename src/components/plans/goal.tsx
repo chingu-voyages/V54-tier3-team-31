@@ -38,7 +38,7 @@ const Goal: React.FC<GoalProps> = ({
             </div>
             <div className="w-full space-y-1">
                 {tasks.map((task, index) => (
-                    <Task key={index} {...task} />
+                    <Task key={index} {...task} onDeleteTaskClick={()=> {}}/>
                 ))}
             </div>
             <Button
