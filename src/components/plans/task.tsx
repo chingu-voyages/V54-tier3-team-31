@@ -15,6 +15,7 @@ import { FormField, FormItem, FormControl, FormMessage } from '../ui/form'
 import { Input } from '../ui/input'
 import { UseFormReturn } from 'react-hook-form'
 import { TaskFormValues } from '@/lib/types/types'
+import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
 
 
 interface TaskProps {
@@ -42,14 +43,6 @@ const Task: React.FC<TaskProps> = ({
     onEditTask,
     form,
 }) => {
-    const frequencyOptions = ['Once', 'Daily', 'Weekly', 'Monthly']
-    const durationOptions = [
-        '5 mins',
-        '10 mins',
-        '15 mins',
-        '30 mins',
-        '1 hour',
-    ]
     const [isEditing, setIsEditing] = useState(false)
     const formRef = useRef<HTMLDivElement>(null)
 
@@ -70,11 +63,9 @@ const Task: React.FC<TaskProps> = ({
         setIsEditing(newState)
         
         if (newState) {
-            // When we start editing, add the document click listener with a small delay
-            // to prevent the click that opened the form from immediately closing it
-            setTimeout(() => {
-                document.addEventListener('mousedown', handleDocumentClick)
-            }, 0)
+            // Prepopulate the field
+            form.setValue('title', title)
+            document.addEventListener('mousedown', handleDocumentClick)
         } else {
             // When we stop editing, remove the document click listener
             document.removeEventListener('mousedown', handleDocumentClick)
@@ -131,7 +122,7 @@ const Task: React.FC<TaskProps> = ({
                                                                             </Button>
                                                                         </DropdownMenuTrigger>
                                                                         <DropdownMenuContent align="start">
-                                                                            {frequencyOptions.map(
+                                                                            {FREQUENCY_OPTIONS.map(
                                                                                 (option) => (
                                                                                     <DropdownMenuItem
                                                                                         key={option}
@@ -169,7 +160,7 @@ const Task: React.FC<TaskProps> = ({
                                                                             </Button>
                                                                         </DropdownMenuTrigger>
                                                                         <DropdownMenuContent align="start">
-                                                                            {durationOptions.map(
+                                                                            {DURATION_OPTIONS.map(
                                                                                 (option) => (
                                                                                     <DropdownMenuItem
                                                                                         key={option}
@@ -233,7 +224,7 @@ const Task: React.FC<TaskProps> = ({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
-                                    {frequencyOptions.map((option) => (
+                                    {FREQUENCY_OPTIONS.map((option) => (
                                         <DropdownMenuItem
                                             key={option}
                                             onSelect={() =>
@@ -260,7 +251,7 @@ const Task: React.FC<TaskProps> = ({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start">
-                                    {durationOptions.map((option) => (
+                                    {DURATION_OPTIONS.map((option) => (
                                         <DropdownMenuItem
                                             key={option}
                                             onSelect={() =>
