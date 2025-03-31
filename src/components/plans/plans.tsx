@@ -25,21 +25,9 @@ import {
     DropdownMenuTrigger,
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import {
-    getAllPLanTasksFromLocal,
-    removeTaskFromLocal,
-} from '@/lib/localforage'
+import { getAllPLanTasksFromLocal } from '@/lib/localforage'
 import { planTaskReducer } from './planTaskReducer'
-
-
-// Zod schema for the new goal form
-const TaskFormSchema = z.object({
-    title: z.string().min(1, {
-        message: 'Goal title cannot be empty.',
-    }),
-    frequency: z.string().optional().default('Once'), // Made optional, default 'Once'
-    duration: z.string().optional().default('5 mins'), // Made optional, default '5 mins'
-})
+import { TaskFormSchema } from '@/lib/types/validations'
 
 const goals = [
     {
@@ -50,16 +38,19 @@ const goals = [
             'After a long coding session or before lunch, refresh your mind.',
         tasks: [
             {
+                id: Date.now(),
                 title: 'Stretch (neck, shoulders, back)',
                 frequency: 'Daily',
                 duration: '5 mins',
             },
             {
+                id: Date.now(),
                 title: '10 push-ups, squats, or jumping jacks',
                 frequency: 'Daily',
                 duration: '5 mins',
             },
             {
+                id: Date.now(),
                 title: 'Walk while listening to music/podcast',
                 frequency: 'Weekly',
                 duration: '15 mins',
@@ -71,16 +62,20 @@ const goals = [
         title: 'Sleep Early',
         tasks: [
             {
+                id: Date.now(),
+
                 title: 'Dim lights, activate night mode',
                 frequency: 'Monthly',
                 duration: '15 mins',
             },
             {
+                id: Date.now(),
                 title: 'Do 4-7-8 deep breathing.',
                 frequency: 'Daily',
                 duration: '10 mins',
             },
             {
+                id: Date.now(),
                 title: 'Write one sentence about your day',
                 frequency: 'Once',
                 duration: '5 mins',
@@ -93,8 +88,8 @@ const goals = [
 
 const Plans: React.FC = () => {
     // State to manage the visibility of the add goal form
-    const [isAddingTasks, setIsAddingTasks] = useState(false)
-    const [planTasks, dispatch] = useReducer(planTaskReducer, []);
+    const [isAdding, setIsAdding] = useState<boolean>(false)
+    const [planTasks, dispatch] = useReducer(planTaskReducer, [])
     const frequencyOptions = ['Once', 'Daily', 'Weekly', 'Monthly']
     const durationOptions = [
         '5 mins',
@@ -116,31 +111,37 @@ const Plans: React.FC = () => {
 
     // --- Event Handlers ---
     const handleAddTaskClick = () => {
-        setIsAddingTasks(true)
+        setIsAdding(true)
         form.reset() // Reset form when opening
     }
 
-    const handleEditTaskClick = () => {
-
+    const handleEditTask = (
+        id: number,
+        values: z.infer<typeof TaskFormSchema>
+    ) => {
+        dispatch({
+            id,
+            values,
+            type: 'edited',
+        })
     }
 
     const handleDeleteTaskClick = (taskId: number) => {
         dispatch({
-          type: "deleted",
-          id: taskId
+            type: 'deleted',
+            id: taskId,
         })
-        removeTaskFromLocal(taskId)
     }
 
-    function onSubmit(values: z.infer<typeof TaskFormSchema>) {
+    function handleAddTask(values: z.infer<typeof TaskFormSchema>) {
         // User hits enter then we need to persist those inputted values
         console.log('New Task:', values)
-          
+
         dispatch({
-          type: "submit",
-          values: values
+            type: 'added',
+            values,
         })
-        setIsAddingTasks(false)
+        setIsAdding(false)
         // Save the updated list to local storage
         form.reset()
     }
@@ -150,8 +151,8 @@ const Plans: React.FC = () => {
         const localPlanTasks = async () => {
             const planTasks = await getAllPLanTasksFromLocal()
             dispatch({
-              type: "initial",
-              planTasks: planTasks
+                type: 'initial',
+                planTasks: planTasks,
             })
         }
         localPlanTasks()
@@ -171,10 +172,10 @@ const Plans: React.FC = () => {
                 {/* Content */}
                 <div className="flex flex-col px-4">
                     {/* --- New Task Form --- */}
-                    {isAddingTasks && (
+                    {isAdding && (
                         <Form {...form}>
                             <form
-                                onSubmit={form.handleSubmit(onSubmit)}
+                                onSubmit={form.handleSubmit(handleAddTask)}
                                 className="space-y-4 border-b border-border pb-3 pt-4" // Added border like Task
                             >
                                 <FormField
@@ -192,7 +193,7 @@ const Plans: React.FC = () => {
                                                         <Input
                                                             placeholder="Your Task"
                                                             {...field}
-                                                            className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto" // Adjusted Input style
+                                                            className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                                                             variant="ghost"
                                                         />
                                                     </div>
@@ -310,7 +311,7 @@ const Plans: React.FC = () => {
                                                             <DropdownMenuItem
                                                                 className="text-destructive"
                                                                 onClick={() =>
-                                                                    setIsAddingTasks(
+                                                                    setIsAdding(
                                                                         false
                                                                     )
                                                                 } // Close form on cancel
@@ -339,11 +340,12 @@ const Plans: React.FC = () => {
                             key={nanoid()}
                             {...planTask}
                             onDeleteTaskClick={handleDeleteTaskClick}
-                            onEditTaskClick={handleEditTaskClick}  
+                            onEditTask={handleEditTask}
+                            form={form}
                         />
                     ))}
                     {goals.map((goal) => (
-                        <Goal key={goal.id} {...goal} />
+                        <Goal key={goal.id} {...goal} form={form} />
                     ))}
 
                     {/* Add a Task button - visible on larger screens */}

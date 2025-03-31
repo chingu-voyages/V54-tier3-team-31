@@ -6,24 +6,34 @@ import { Plus, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DropdownMenuItem } from '../ui/dropdown-menu'
 import ActionDropdown from '../ui/action-dropdown'
+import { UseFormReturn } from 'react-hook-form'
+import { z } from 'zod'
+import { TaskFormSchema } from '@/lib/types/validations'
+
+
+type TaskFormValues = z.infer<typeof TaskFormSchema>
 
 interface GoalProps {
     title: string
     toggleIcon?: string
     tasks: {
+        id: number,
         title: string
         frequency: string
         duration: string
     }[]
     bestTimeTitle: string
     bestTimeDescription: string
+    form: UseFormReturn<TaskFormValues> 
 }
 
 const Goal: React.FC<GoalProps> = ({
+
     title,
     tasks,
     bestTimeTitle,
     bestTimeDescription,
+    form
 }) => {
     return (
         <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
@@ -42,7 +52,9 @@ const Goal: React.FC<GoalProps> = ({
                         key={index}
                         {...task}
                         onDeleteTaskClick={() => {}}
-                        onEditTaskClick={() => {}}
+                        onEditTask={() => {}}
+                        form={form}
+
                     />
                 ))}
             </div>
