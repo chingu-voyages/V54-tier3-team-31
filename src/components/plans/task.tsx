@@ -21,6 +21,7 @@ interface TaskProps {
     onFrequencyChange?: (newFrequency: string) => void,
     onDurationChange?: (newDuration: string) => void,
     onDeleteTaskClick: (taskId: number) => void,
+    onEditTaskClick: (taskId: number) => void,
 }
 
 const Task: React.FC<TaskProps> = ({
@@ -31,6 +32,7 @@ const Task: React.FC<TaskProps> = ({
     onFrequencyChange,
     onDurationChange,
     onDeleteTaskClick,
+    onEditTaskClick
 }) => {
     const frequencyOptions = ['Once', 'Daily', 'Weekly', 'Monthly']
     const durationOptions = [

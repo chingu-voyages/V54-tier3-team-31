@@ -11,9 +11,9 @@ interface GoalProps {
     title: string
     toggleIcon?: string
     tasks: {
-        title: string,
-        frequency: string,
-        duration: string,
+        title: string
+        frequency: string
+        duration: string
     }[]
     bestTimeTitle: string
     bestTimeDescription: string
@@ -38,7 +38,12 @@ const Goal: React.FC<GoalProps> = ({
             </div>
             <div className="w-full space-y-1">
                 {tasks.map((task, index) => (
-                    <Task key={index} {...task} onDeleteTaskClick={()=> {}}/>
+                    <Task
+                        key={index}
+                        {...task}
+                        onDeleteTaskClick={() => {}}
+                        onEditTaskClick={() => {}}
+                    />
                 ))}
             </div>
             <Button

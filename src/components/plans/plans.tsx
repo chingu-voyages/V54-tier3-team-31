@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useReducer, useState } from 'react'
 import Goal from './goal'
 import { Plus, Star, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -26,11 +26,12 @@ import {
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import {
-    saveTasksToLocal,
     getAllPLanTasksFromLocal,
     removeTaskFromLocal,
 } from '@/lib/localforage'
-import { Task as TaskSchema } from '@/lib/schema'
+import { planTaskReducer } from './planTaskReducer'
+
+
 // Zod schema for the new goal form
 const TaskFormSchema = z.object({
     title: z.string().min(1, {
@@ -93,7 +94,7 @@ const goals = [
 const Plans: React.FC = () => {
     // State to manage the visibility of the add goal form
     const [isAddingTasks, setIsAddingTasks] = useState(false)
-    const [planTasks, setPlanTasks] = useState<TaskSchema[]>([])
+    const [planTasks, dispatch] = useReducer(planTaskReducer, []);
     const frequencyOptions = ['Once', 'Daily', 'Weekly', 'Monthly']
     const durationOptions = [
         '5 mins',
@@ -119,37 +120,28 @@ const Plans: React.FC = () => {
         form.reset() // Reset form when opening
     }
 
+    const handleEditTaskClick = () => {
+
+    }
+
     const handleDeleteTaskClick = (taskId: number) => {
-        const newPlanTasks = planTasks.filter((t) => t.id !== taskId)
-        setPlanTasks(newPlanTasks)
+        dispatch({
+          type: "deleted",
+          id: taskId
+        })
         removeTaskFromLocal(taskId)
     }
 
     function onSubmit(values: z.infer<typeof TaskFormSchema>) {
         // User hits enter then we need to persist those inputted values
         console.log('New Task:', values)
-
-        // Create a complete task object with all required properties
-        // Date.now() provides a number based on milliseconds since epoch,
-        // offering high practical uniqueness for client-side generation.
-        const newTask: TaskSchema = {
-            ...values,
-            userId: nanoid(), // Keep nanoid for userId if it's suitable there
-            id: Date.now(), // Use timestamp for a practically unique numeric ID
-            difficulty: null,
-            description: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            goalId: 0, // Default goal ID or appropriate value
-            completed: false,
-        }
-
-        // Update state immediately for UI responsiveness
-        const updatedTasks = [newTask, ...planTasks]
-        setPlanTasks(updatedTasks)
+          
+        dispatch({
+          type: "submit",
+          values: values
+        })
         setIsAddingTasks(false)
         // Save the updated list to local storage
-        saveTasksToLocal(updatedTasks)
         form.reset()
     }
     // --- End Form Setup & Handlers ---
@@ -157,7 +149,10 @@ const Plans: React.FC = () => {
     useEffect(() => {
         const localPlanTasks = async () => {
             const planTasks = await getAllPLanTasksFromLocal()
-            setPlanTasks(planTasks)
+            dispatch({
+              type: "initial",
+              planTasks: planTasks
+            })
         }
         localPlanTasks()
     }, [])
@@ -173,7 +168,6 @@ const Plans: React.FC = () => {
                         className="w-full"
                     />
                 </div>
-
                 {/* Content */}
                 <div className="flex flex-col px-4">
                     {/* --- New Task Form --- */}
@@ -345,6 +339,7 @@ const Plans: React.FC = () => {
                             key={nanoid()}
                             {...planTask}
                             onDeleteTaskClick={handleDeleteTaskClick}
+                            onEditTaskClick={handleEditTaskClick}  
                         />
                     ))}
                     {goals.map((goal) => (
