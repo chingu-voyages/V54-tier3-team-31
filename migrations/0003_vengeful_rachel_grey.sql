@@ -1,0 +1,1 @@
+ALTER TABLE "goal" ADD COLUMN "type" text DEFAULT 'goal' NOT NULL;
