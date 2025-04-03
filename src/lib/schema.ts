@@ -139,15 +139,14 @@ export const userRelations = relations(users, ({ many }) => ({
 }))
 
 export const goalRelations = relations(goals, ({ many, one }) => ({
+    // Renamed relation
     user: one(users, {
         fields: [goals.userId],
         references: [users.id],
     }),
     tasks: many(tasks),
-    // Removed goalLogs relation
 }))
 
-// Removed goalLogRelations definition
 
 export const taskRelations = relations(tasks, ({ one }) => ({
     goal: one(goals, {

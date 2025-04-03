@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import React from 'react'
 import Task from './task'
 import { Plus, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -12,8 +12,8 @@ interface GoalProps {
     toggleIcon?: string
     tasks: {
         title: string
-        difficultyIcon: ReactNode
-        difficultyText: string
+        frequency: string
+        duration: string
     }[]
     bestTimeTitle: string
     bestTimeDescription: string
@@ -40,9 +40,9 @@ const Goal: React.FC<GoalProps> = ({
                 {tasks.map((task, index) => (
                     <Task
                         key={index}
-                        title={task.title}
-                        difficultyIcon={task.difficultyIcon}
-                        difficultyText={task.difficultyText}
+                        {...task}
+                        onDeleteTaskClick={() => {}}
+                        onEditTaskClick={() => {}}
                     />
                 ))}
             </div>

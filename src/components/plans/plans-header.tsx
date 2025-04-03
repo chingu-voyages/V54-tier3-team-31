@@ -13,17 +13,21 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 export type DropdownAction = {
-    name: string;
-    href: string | null;
+    name: string
+    href: string | null
 }
 
 interface PlansHeaderProps {
-    className?: string;
+    className?: string
+    onAddTaskClick?: () => void
 }
 
-export const PlansHeader: React.FC<PlansHeaderProps> = ({ className = '' }) => {
+export const PlansHeader: React.FC<PlansHeaderProps> = ({
+    className = '',
+    onAddTaskClick,
+}) => {
     const pathname = usePathname()
-    
+
     const dropDownActions: DropdownAction[] = [
         {
             name: 'Add a Task',
@@ -31,7 +35,7 @@ export const PlansHeader: React.FC<PlansHeaderProps> = ({ className = '' }) => {
         },
         {
             name: 'Add a Goal and Tasks',
-            href: '/add-goal-and-tasks',
+            href: null,
         },
         {
             name: 'Add Plans Based on My Goal',
@@ -50,7 +54,17 @@ export const PlansHeader: React.FC<PlansHeaderProps> = ({ className = '' }) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     {dropDownActions.map((item) => (
-                        <DropdownMenuItem key={item.name}>
+                        <DropdownMenuItem
+                            key={item.name}
+                            onClick={() => {
+                                if (
+                                    item.name === 'Add a Task' &&
+                                    onAddTaskClick
+                                ) {
+                                    onAddTaskClick()
+                                }
+                            }}
+                        >
                             {item.href ? (
                                 <Link
                                     href={item.href}
