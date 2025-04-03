@@ -1,7 +1,6 @@
 import localforage from 'localforage'
 import * as schema from './schema'
-
-import { nanoid } from 'nanoid';
+import { TaskFormValues } from './types/types'
 
 // offline support for db storage (using localForage)
 localforage.config({
@@ -93,33 +92,69 @@ export const saveTasksToLocal = async (tasks: schema.Task[]): Promise<void> => {
 }
 
 export const removeTaskFromLocal = async (taskId: number): Promise<void> => {
-    ensureLocalForageConfigured(); // Ensure config before use
+    ensureLocalForageConfigured() // Ensure config before use
     if (typeof window === 'undefined') {
-        console.warn('Attempted to remove task from localForage on the server.');
-        return; // Don't run on server
+        console.warn('Attempted to remove task from localForage on the server.')
+        return // Don't run on server
     }
     try {
-        const allPlanTasks = await getAllPLanTasksFromLocal();
-        const updatedPlanTasks = allPlanTasks.filter(task => task.id !== taskId);
+        const allPlanTasks = await getAllPLanTasksFromLocal()
+        const updatedPlanTasks = allPlanTasks.filter(
+            (task) => task.id !== taskId
+        )
         // Only save back if the list actually changed
         if (updatedPlanTasks.length !== allPlanTasks.length) {
-            
-            await saveTasksToLocal(updatedPlanTasks);
-            console.log(`Task ${taskId} removed from the 'plan-tasks-all' list.`);
+            await saveTasksToLocal(updatedPlanTasks)
+            console.log(
+                `Task ${taskId} removed from the 'plan-tasks-all' list.`
+            )
         }
-
     } catch (err) {
-        console.error(`Error removing task ${taskId} from localForage:`, err);
+        console.error(`Error removing task ${taskId} from localForage:`, err)
         if (
             err instanceof Error &&
             err.message.includes('No available storage method found')
         ) {
             console.error(
                 'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
-            );
+            )
         }
     }
-};
+}
+export const editTaskFromLocal = async (
+    taskId: number,
+    values: TaskFormValues
+): Promise<void> => {
+    ensureLocalForageConfigured() // Ensure config before use
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to edit task from localForage on the server.')
+        return // Don't run on server
+    }
+    try {
+        const allPlanTasks = await getAllPLanTasksFromLocal()
+        const updatedTasks = allPlanTasks.map((task) => {
+            if (task.id === taskId) {
+                return {
+                    ...task,
+                    ...values,
+                }
+            }
+            return task
+        })
+        await saveTasksToLocal(updatedTasks)
+        console.log(`Task ${taskId} removed from the 'plan-tasks-all' list.`)
+    } catch (err) {
+        console.error(`Error removing task ${taskId} from localForage:`, err)
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            )
+        }
+    }
+}
 
 export const getAllGoalsFromLocal = async (): Promise<{
     goals: schema.Goal[]
