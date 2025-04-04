@@ -2,7 +2,7 @@
 
 import { useEffect, useReducer } from 'react'
 import { TaskFormValues } from '@/lib/types/types'
-import { planTaskReducer } from '@/components/plans/planTaskReducer'
+import { planTaskReducer } from '@/lib/reducers'
 import { getAllPLanTasksFromLocal } from '@/lib/localforage'
 import { z } from 'zod'
 import { TaskFormSchema } from '@/lib/types/validations'
@@ -28,9 +28,10 @@ export function useTaskManagement() {
     })
   }
 
-  const editTask = (id: number, values: TaskFormValues) => {
+  const editTask = (id: number, values: TaskFormValues, goalId?: number) => {
     dispatch({
       id,
+      goalId,
       values,
       type: 'edited',
     })

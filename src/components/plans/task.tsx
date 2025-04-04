@@ -16,44 +16,44 @@ import { Input } from '../ui/input'
 import { UseFormReturn } from 'react-hook-form'
 import { TaskFormValues } from '@/lib/types/types'
 import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
-
+import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 
 interface TaskProps {
     id: number
     title: string
-    // Add props for frequency and duration if they need to be dynamic
-    frequency?: string | null // e.g., 'Once', 'Daily'
-    duration?: string | null // e.g., '5 mins', '15 mins'
-    // Add callback functions to handle selection changes
+    frequency?: string | null
+    duration?: string | null
     onFrequencyChange?: (newFrequency: string) => void
     onDurationChange?: (newDuration: string) => void
     onDeleteTaskClick: (taskId: number) => void
-    onEditTask: (id: number, values: TaskFormValues) => void
-    form: UseFormReturn<TaskFormValues>
+    onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
+    form: UseFormReturn<TaskFormValues>,
+    goalId?: number 
 }
 
 const Task: React.FC<TaskProps> = ({
     id,
     title,
-    frequency = 'Once', // Default value
-    duration = '5 mins', // Default value
+    frequency = 'Once',
+    duration = '5 mins',
     onFrequencyChange,
     onDurationChange,
     onDeleteTaskClick,
     onEditTask,
     form,
+    goalId
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const formRef = useRef<HTMLDivElement>(null)
+    
+    // Access the TaskGoalContext if available
+    const taskGoalContext = goalId ? useTaskGoalContext() : null
 
     // Handler for document clicks - checks if click is outside the form
     const handleDocumentClick = (e: MouseEvent) => {
-        // If the form ref is set and the click is outside the form
         if (formRef.current && !formRef.current.contains(e.target as Node)) {
-            // Save changes before closing the form
-            form.handleSubmit((values) => onEditTask(id, values))()
+            form.handleSubmit((values) => handleTaskEdit(id, values))()
             setIsEditing(false)
-            // Clean up the event listener
             document.removeEventListener('mousedown', handleDocumentClick)
         }
     }
@@ -63,13 +63,54 @@ const Task: React.FC<TaskProps> = ({
         setIsEditing(newState)
         
         if (newState) {
-            // Prepopulate the field
             form.setValue('title', title)
+            form.setValue('frequency', frequency || 'Once')
+            form.setValue('duration', duration || '5 mins')
             document.addEventListener('mousedown', handleDocumentClick)
         } else {
-            // When we stop editing, remove the document click listener
             document.removeEventListener('mousedown', handleDocumentClick)
         }
+    }
+
+    // Unified handler for task editing
+    const handleTaskEdit = async (taskId: number, values: TaskFormValues) => {
+        if (goalId && taskGoalContext) {
+            // If this is a goal task and we have access to context, use the context method
+            await taskGoalContext.updateTaskInGoal(taskId, goalId, values)
+        } else {
+            // Otherwise use the standard method
+            onEditTask(taskId, values, goalId)
+        }
+    }
+
+    // Handle frequency change in non-editing mode
+    const handleFrequencyChange = async (newFrequency: string) => {
+        if (onFrequencyChange) {
+            onFrequencyChange(newFrequency)
+        }
+        
+        const updatedValues = {
+            title,
+            frequency: newFrequency,
+            duration: duration || '5 mins',
+        }
+        
+        await handleTaskEdit(id, updatedValues)
+    }
+
+    // Handle duration change in non-editing mode
+    const handleDurationChange = async (newDuration: string) => {
+        if (onDurationChange) {
+            onDurationChange(newDuration)
+        }
+        
+        const updatedValues = {
+            title,
+            frequency: frequency || 'Once',
+            duration: newDuration,
+        }
+        
+        await handleTaskEdit(id, updatedValues)
     }
 
     return (
@@ -78,7 +119,7 @@ const Task: React.FC<TaskProps> = ({
                 <div ref={formRef}>
                     <Form {...form}>
                         <form
-                            onSubmit={form.handleSubmit((values) => onEditTask(id, values))}
+                            onSubmit={form.handleSubmit((values) => handleTaskEdit(id, values))}
                             className="space-y-4 border-b border-border pb-3 pt-4"
                         >
                             <FormField
@@ -227,9 +268,7 @@ const Task: React.FC<TaskProps> = ({
                                     {FREQUENCY_OPTIONS.map((option) => (
                                         <DropdownMenuItem
                                             key={option}
-                                            onSelect={() =>
-                                                onFrequencyChange?.(option)
-                                            }
+                                            onSelect={() => handleFrequencyChange(option)}
                                         >
                                             {option}
                                         </DropdownMenuItem>
@@ -254,9 +293,7 @@ const Task: React.FC<TaskProps> = ({
                                     {DURATION_OPTIONS.map((option) => (
                                         <DropdownMenuItem
                                             key={option}
-                                            onSelect={() =>
-                                                onDurationChange?.(option)
-                                            }
+                                            onSelect={() => handleDurationChange(option)}
                                         >
                                             {option}
                                         </DropdownMenuItem>

@@ -5,7 +5,6 @@ import { Star, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import {
     Form,
     FormControl,
@@ -23,14 +22,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { TaskFormSchema } from '@/lib/types/validations'
 import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
+import { TaskFormValues } from '@/lib/types/types'
 
 interface TaskFormProps {
-    onAddTask: (values: z.infer<typeof TaskFormSchema>) => void
+    onAddTask: (values: TaskFormValues) => void
     onCancel: () => void
 }
 
 export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
-    const form = useForm<z.infer<typeof TaskFormSchema>>({
+    const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
             title: '',
@@ -39,7 +39,7 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
         },
     })
 
-    const handleSubmit = (values: z.infer<typeof TaskFormSchema>) => {
+    const handleSubmit = (values: TaskFormValues) => {
         onAddTask(values)
         form.reset()
     }
@@ -67,6 +67,7 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
                                             {...field}
                                             className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                                             variant="ghost"
+                                            autoFocus
                                         />
                                     </div>
                                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">

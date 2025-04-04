@@ -20,11 +20,13 @@ export type DropdownAction = {
 interface PlansHeaderProps {
     className?: string
     onAddTaskClick?: () => void
+    onAddGoalClick?: () => void
 }
 
 export const PlansHeader: React.FC<PlansHeaderProps> = ({
     className = '',
     onAddTaskClick,
+    onAddGoalClick,
 }) => {
     const pathname = usePathname()
 
@@ -62,6 +64,12 @@ export const PlansHeader: React.FC<PlansHeaderProps> = ({
                                     onAddTaskClick
                                 ) {
                                     onAddTaskClick()
+                                }
+                                if (
+                                    item.name === 'Add a Goal and Tasks' &&
+                                    onAddGoalClick
+                                ) {
+                                    onAddGoalClick()
                                 }
                             }}
                         >

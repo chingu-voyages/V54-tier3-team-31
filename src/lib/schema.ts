@@ -165,3 +165,4 @@ export type Account = typeof accounts.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Goal = typeof goals.$inferSelect
 export type Task = typeof tasks.$inferSelect
+

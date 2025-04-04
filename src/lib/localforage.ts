@@ -1,6 +1,10 @@
 import localforage from 'localforage'
 import * as schema from './schema'
 import { TaskFormValues } from './types/types'
+import { GoalWithTasks } from './types/types'
+
+const PLANS_KEY = `plan-tasks-all`
+const GOALS_KEY = 'goals-all'
 
 // offline support for db storage (using localForage)
 localforage.config({
@@ -30,32 +34,6 @@ function ensureLocalForageConfigured() {
     }
 }
 
-// Save a goal (with tasks) to localForage
-export const saveGoalToLocal = async (
-    goal: schema.Goal,
-    tasks: schema.Task[]
-): Promise<void> => {
-    ensureLocalForageConfigured() // Ensure config before use
-    try {
-        await localforage.setItem(`goal-${goal.id}`, goal)
-        for (const task of tasks) {
-            await localforage.setItem(`task-${task.id}`, task)
-        }
-        console.log(`Goal ${goal.id} and its tasks saved locally.`)
-    } catch (err) {
-        console.error('Error saving goal to localForage:', err)
-        // Check if the error is the specific storage error
-        if (
-            err instanceof Error &&
-            err.message.includes('No available storage method found')
-        ) {
-            console.error(
-                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
-            )
-        }
-    }
-}
-
 export const getAllPLanTasksFromLocal = async (): Promise<schema.Task[]> => {
     ensureLocalForageConfigured()
     if (typeof window === 'undefined') {
@@ -74,10 +52,10 @@ export const saveTasksToLocal = async (tasks: schema.Task[]): Promise<void> => {
     try {
         // Generate a single key for the list of planned tasks for easier retrieval/management if needed
         // Using a fixed key might be better if you always want to overwrite the same list
-        const planKey = `plan-tasks-all`
-        await localforage.setItem(planKey, tasks) // Save the array itself
 
-        console.log(`Planned tasks saved locally under key ${planKey}.`)
+        await localforage.setItem(PLANS_KEY, tasks) // Save the array itself
+
+        console.log(`Planned tasks saved locally under key ${PLANS_KEY}.`)
     } catch (err) {
         console.error('Error saving tasks to localForage:', err) // Corrected error message
         if (
@@ -121,30 +99,66 @@ export const removeTaskFromLocal = async (taskId: number): Promise<void> => {
         }
     }
 }
-export const editTaskFromLocal = async (
-    taskId: number,
+export const editTaskFromLocal = async ({
+    taskId,
+    values,
+    goalId,
+}: {
+    taskId: number
     values: TaskFormValues
-): Promise<void> => {
+    goalId?: number
+}): Promise<void> => {
     ensureLocalForageConfigured() // Ensure config before use
     if (typeof window === 'undefined') {
         console.warn('Attempted to edit task from localForage on the server.')
         return // Don't run on server
     }
     try {
-        const allPlanTasks = await getAllPLanTasksFromLocal()
-        const updatedTasks = allPlanTasks.map((task) => {
-            if (task.id === taskId) {
-                return {
-                    ...task,
-                    ...values,
+        if (!goalId) {
+            // It means it's a Plans Task and it's not associated with any goal
+            const allPlanTasks = await getAllPLanTasksFromLocal()
+            const updatedTasks = allPlanTasks.map((task) => {
+                if (task.id === taskId) {
+                    return {
+                        ...task,
+                        ...values,
+                    }
                 }
-            }
-            return task
-        })
-        await saveTasksToLocal(updatedTasks)
-        console.log(`Task ${taskId} removed from the 'plan-tasks-all' list.`)
+                return task
+            })
+            await saveTasksToLocal(updatedTasks)
+            console.log(`Task ${taskId} updated in the 'plan-tasks-all' list.`)
+        } else {
+            // Task belongs to a goal
+            const goals = await getAllGoalsFromLocal()
+            const updatedGoals = goals.map(goal => {
+                if (goal.id === goalId) {
+                    // Update the tasks array within this goal
+                    const updatedTasks = goal.tasks.map(task => {
+                        if (task.id === taskId) {
+                            return {
+                                ...task,
+                                ...values,
+                            }
+                        }
+                        return task
+                    })
+                    
+                    // Return updated goal with modified tasks
+                    return {
+                        ...goal,
+                        tasks: updatedTasks
+                    }
+                }
+                return goal
+            })
+            
+            // Save the updated goals back to storage
+            await saveGoalsToLocal(updatedGoals)
+            console.log(`Task ${taskId} in goal ${goalId} updated successfully.`)
+        }
     } catch (err) {
-        console.error(`Error removing task ${taskId} from localForage:`, err)
+        console.error(`Error editing task ${taskId} in localForage:`, err)
         if (
             err instanceof Error &&
             err.message.includes('No available storage method found')
@@ -156,33 +170,39 @@ export const editTaskFromLocal = async (
     }
 }
 
-export const getAllGoalsFromLocal = async (): Promise<{
-    goals: schema.Goal[]
-    tasks: schema.Task[]
-}> => {
+// Save a goal (with tasks) to localForage
+export const saveGoalsToLocal = async (
+    goal: GoalWithTasks[]
+): Promise<void> => {
+    ensureLocalForageConfigured() // Ensure config before use
+    try {
+        await localforage.setItem(GOALS_KEY, goal)
+        console.log(`Goal ${GOALS_KEY} and its tasks saved locally.`)
+    } catch (err) {
+        console.error('Error saving goal to localForage:', err)
+        // Check if the error is the specific storage error
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            )
+        }
+    }
+}
+
+export const getAllGoalsFromLocal = async (): Promise<GoalWithTasks[]> => {
     ensureLocalForageConfigured() // Ensure config before use
     if (typeof window === 'undefined') {
         console.warn('Attempted to get goals from localForage on the server.')
-        return { goals: [], tasks: [] } // Don't run on server
+        return [] // Don't run on server
     }
-    const goals: schema.Goal[] = []
-    const tasks: schema.Task[] = []
+
     try {
-        await localforage.iterate((value, key) => {
-            if (key.startsWith('goal-')) {
-                goals.push(value as schema.Goal)
-            } else if (key.startsWith('task-')) {
-                // Only retrieve individual tasks here
-                tasks.push(value as schema.Task)
-            }
-            // Note: This won't retrieve the 'plan-tasks-all' list directly,
-            // you'd need a separate getItem call if you need that specific list.
-        })
-        console.log('All individual local goals and tasks retrieved:', {
-            goals,
-            tasks,
-        })
-        return { goals, tasks }
+        const goals = await localforage.getItem<GoalWithTasks[]>(GOALS_KEY)
+        console.log('All individual local goals and tasks retrieved:', goals)
+        return goals || []
     } catch (err) {
         console.error('Error retrieving data from localForage:', err)
         if (
@@ -193,6 +213,33 @@ export const getAllGoalsFromLocal = async (): Promise<{
                 'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
             )
         }
-        return { goals: [], tasks: [] }
+        return []
+    }
+}
+
+export const removeGoalFromLocal = async (goalId: number): Promise<void> => {
+    ensureLocalForageConfigured() // Ensure config before use
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to remove task from localForage on the server.')
+        return // Don't run on server
+    }
+    try {
+        const allGoals = await getAllGoalsFromLocal()
+        const updatedGoals = allGoals.filter((goal) => goal.id !== goalId)
+        // Only save back if the list actually changed
+        if (updatedGoals.length !== allGoals.length) {
+            await saveGoalsToLocal(updatedGoals)
+            console.log(`goal ${goalId} removed from the 'goals-all' list.`)
+        }
+    } catch (err) {
+        console.error(`Error removing task ${goalId} from localForage:`, err)
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            )
+        }
     }
 }

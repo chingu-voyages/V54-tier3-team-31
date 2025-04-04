@@ -1,12 +1,10 @@
+// filepath: /Users/jerichowenzel/Desktop/V54-tier3-team-31/tests/components/plans/plans.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Plans from '../../../src/components/plans/plans';
 import { useTaskManagement } from '@/hooks/useTaskManagement';
-import * as matchers from '@testing-library/jest-dom/matchers';
-
-// Add Jest DOM matchers to Vitest expect
-expect.extend(matchers);
+import '@testing-library/jest-dom/vitest';
 
 // Mock the custom hook
 vi.mock('@/hooks/useTaskManagement', () => ({
@@ -20,7 +18,7 @@ vi.mock('nanoid', () => ({
 
 // Mock the TaskForm component to simplify testing
 vi.mock('../../../src/components/plans/TaskForm', () => ({
-    default: ({ onAddTask, onCancel }: { onAddTask: (task: { title: string; frequency: string; duration: string }) => void; onCancel: () => void }) => (
+    default: ({ onAddTask, onCancel }) => (
         <div data-testid="task-form">
             <button onClick={() => onAddTask({ title: 'New Task', frequency: 'Daily', duration: '15 mins' })}>
                 Add Task
@@ -62,19 +60,19 @@ describe('Plans Component', () => {
 
     it('renders without crashing', () => {
         render(<Plans />);
-        expect(screen.getByText(/add a task/i)).toBeTruthy();
+        expect(screen.getByText(/add a task/i)).toBeInTheDocument();
     });
 
     it('displays predefined goals correctly', () => {
         render(<Plans />);
-        expect(screen.getByText('Exercise to Get Healthier')).toBeTruthy();
-        expect(screen.getByText('Sleep Early')).toBeTruthy();
+        expect(screen.getByText('Exercise to Get Healthier')).toBeInTheDocument();
+        expect(screen.getByText('Sleep Early')).toBeInTheDocument();
     });
 
     it('displays user tasks from useTaskManagement hook', () => {
         render(<Plans />);
-        expect(screen.getByText('Test Task 1')).toBeTruthy();
-        expect(screen.getByText('Test Task 2')).toBeTruthy();
+        expect(screen.getByText('Test Task 1')).toBeInTheDocument();
+        expect(screen.getByText('Test Task 2')).toBeInTheDocument();
     });
 
     it('shows task form when "Add a Task" button is clicked', async () => {
@@ -89,7 +87,7 @@ describe('Plans Component', () => {
         await user.click(addButton as HTMLElement);
         
         // Check if TaskForm is rendered
-        expect(screen.getByTestId('task-form')).toBeTruthy();
+        expect(screen.getByTestId('task-form')).toBeInTheDocument();
     });
 
     it('hides task form when cancel is clicked', async () => {
@@ -106,7 +104,7 @@ describe('Plans Component', () => {
         await user.click(cancelButton);
         
         // TaskForm should be hidden now
-        expect(screen.queryByTestId('task-form')).toBeNull();
+        expect(screen.queryByTestId('task-form')).not.toBeInTheDocument();
     });
 
     it('calls addTask when a new task is submitted', async () => {
@@ -136,11 +134,11 @@ describe('Plans Component', () => {
         
         // Check for header container
         const headerContainer = screen.getByText(/add a task/i).closest('div.min-h-screen');
-        expect(headerContainer).toBeTruthy();
+        expect(headerContainer).toBeInTheDocument();
         
         // Check if PlansHeader is rendered
         const mobileHeader = headerContainer?.querySelector('.sticky.top-0');
-        expect(mobileHeader).toBeTruthy();
+        expect(mobileHeader).toBeInTheDocument();
     });
 
     it('renders the correct number of tasks from the hook', () => {
@@ -171,7 +169,7 @@ describe('Plans Component', () => {
         
         // Mobile header add button should be passed the handleAddTaskClick
         const mobileHeader = screen.getByText(/add a task/i).closest('.min-h-screen')?.querySelector('.sticky.top-0');
-        expect(mobileHeader).toBeTruthy();
+        expect(mobileHeader).toBeInTheDocument();
         
         // Since we can't directly test the PlansHeader component's internal button,
         // we'll simulate its behavior by verifying the state changes when handleAddTaskClick is called
@@ -179,6 +177,6 @@ describe('Plans Component', () => {
         await user.click(addTaskButton as HTMLElement);
         
         // Task form should appear
-        expect(screen.getByTestId('task-form')).toBeTruthy();
+        expect(screen.getByTestId('task-form')).toBeInTheDocument();
     });
 });
