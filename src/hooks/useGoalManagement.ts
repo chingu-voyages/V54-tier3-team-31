@@ -38,6 +38,26 @@ export function useGoalManagement(){
     editGoalInLocal(id, { name: newName });
   }
 
+  const editBestTime = (id: number, updates: { bestTimeTitle?: string, bestTimeDescription?: string }) => {
+    // Find the current goal to get its name
+    const currentGoal = goals.find(goal => goal.id === id);
+    if (!currentGoal) return;
+
+    const updatesWithName = {
+      ...updates,
+      name: currentGoal.name  // Preserve the existing name
+    };
+
+    dispatch({
+      type: 'edited',
+      id,
+      values: updatesWithName
+    });
+    
+    // Also update in local storage
+    editGoalInLocal(id, updatesWithName);
+  }
+
   const deleteGoal = (id: number) => {
     dispatch({
       id,
@@ -51,6 +71,7 @@ export function useGoalManagement(){
     goals,
     addGoal,
     editGoal,
+    editBestTime,
     deleteGoal
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, KeyboardEvent } from 'react'
+import React, { useState, useRef, KeyboardEvent, useEffect, useCallback } from 'react'
 import Task from './task'
 import { Plus, Trash, Check, X } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -24,18 +24,134 @@ interface TaskItem {
 const BestTimeInfo: React.FC<{
     title: string | null
     description: string | null
-}> = ({ title, description }) => {
-    if (!title && !description) return null;
+    goalId: number
+    onEditBestTime?: (goalId: number, updates: { bestTimeTitle?: string | undefined, bestTimeDescription?: string | undefined }) => void
+}> = ({ title, description, goalId, onEditBestTime }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedTitle, setEditedTitle] = useState(title || "");
+    const [editedDescription, setEditedDescription] = useState(description || "");
+    const bestTimeRef = useRef<HTMLDivElement>(null);
+    
+    // Move handleUpdateBestTime inside a useCallback hook to prevent recreation on every render
+    const handleUpdateBestTime = useCallback(() => {
+        if (onEditBestTime) {
+            const updates: { bestTimeTitle?: string | undefined, bestTimeDescription?: string | undefined } = {};
+            
+            // Only include fields that have changed
+            if (editedTitle !== title) {
+                updates.bestTimeTitle = editedTitle || undefined;
+            }
+            
+            if (editedDescription !== description) {
+                updates.bestTimeDescription = editedDescription || undefined;
+            }
+            
+            // Only update if something changed
+            if (Object.keys(updates).length > 0) {
+                onEditBestTime(goalId, updates);
+            }
+        }
+        setIsEditing(false);
+    }, [editedTitle, editedDescription, title, description, goalId, onEditBestTime]);
+
+    // Handle key presses
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleUpdateBestTime();
+        } else if (e.key === 'Escape') {
+            setEditedTitle(title || "");
+            setEditedDescription(description || "");
+            setIsEditing(false);
+        }
+    };
+
+    // Setup document click handler - memoize to prevent unnecessary re-renders
+    const handleClickOutside = useCallback((e: MouseEvent) => {
+        if (bestTimeRef.current && !bestTimeRef.current.contains(e.target as Node)) {
+            handleUpdateBestTime();
+        }
+    }, [bestTimeRef, handleUpdateBestTime]);
+    
+    // Always define the effect, never conditionally call hooks
+    useEffect(() => {
+        // Only add event listener when editing
+        if (isEditing) {
+            document.addEventListener('mousedown', handleClickOutside);
+            
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+        
+        return undefined; // Return empty cleanup function when not editing
+    }, [isEditing, handleClickOutside]);
+    
+    // Skip rendering if no title and description and not in edit mode
+    if (!isEditing && !title && !description) return null;
     
     return (
-        <div className="items-stretch bg-zinc-100 dark:bg-neutral-800 border border-zinc-200 dark:border-zinc-800 flex w-full flex-col text-sm justify-center p-3 rounded-md">
+        <div 
+            ref={bestTimeRef}
+            className="items-stretch bg-zinc-100 dark:bg-neutral-800 border border-zinc-200 dark:border-zinc-800 flex w-full flex-col text-sm justify-center p-3 rounded-md"
+        >
             <div className="w-full">
-                <div className="font-medium leading-none text-zinc-900 dark:text-white">
-                    {title || "Best Time"}
-                </div>
-                <div className="text-zinc-600 dark:text-zinc-400 font-normal leading-5 mt-1">
-                    {description || "No description provided"}
-                </div>
+                {isEditing ? (
+                    <div className="space-y-2">
+                        <Input
+                            value={editedTitle}
+                            onChange={(e) => setEditedTitle(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="text-sm font-medium border-none focus-visible:ring-1 p-2 h-auto dark:bg-neutral-800 dark:text-white"
+                            placeholder="Best Time Title"
+                            autoFocus
+                        />
+                        <textarea
+                            value={editedDescription}
+                            onChange={(e) => setEditedDescription(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="w-full resize-none bg-transparent text-zinc-600 dark:text-zinc-400 font-normal leading-5 focus:outline-none"
+                            placeholder="Add a description..."
+                            rows={2}
+                        />
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleUpdateBestTime}
+                                className="h-6 px-2 text-xs text-green-600"
+                            >
+                                <Check size={14} className="mr-1" />
+                                Save
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                    setEditedTitle(title || "");
+                                    setEditedDescription(description || "");
+                                    setIsEditing(false);
+                                }}
+                                className="h-6 px-2 text-xs text-red-500"
+                            >
+                                <X size={14} className="mr-1" />
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div 
+                        className="cursor-pointer hover:bg-zinc-200 dark:hover:bg-neutral-700 transition-colors p-1 rounded-sm"
+                        onClick={() => setIsEditing(true)}
+                    >
+                        <div className="font-medium leading-none text-zinc-900 dark:text-white">
+                            {title || "Best Time"}
+                        </div>
+                        <div className="text-zinc-600 dark:text-zinc-400 font-normal leading-5 mt-1">
+                            {description || "No description provided"}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -52,6 +168,7 @@ interface GoalProps extends Omit<GoalWithTasks, 'tasks'> {
     onEditTask?: (id: number, values: TaskFormValues, goalId?: number) => void
     onDeleteGoal: () => void
     onEditGoal?: (goalId: number, newName: string) => void
+    onEditBestTime?: (goalId: number, updates: { bestTimeTitle?: string, bestTimeDescription?: string }) => void
     id: number
 }
 
@@ -66,7 +183,8 @@ const Goal: React.FC<GoalProps> = ({
     onDeleteTask,
     onEditTask,
     onAddTask,
-    onEditGoal
+    onEditGoal,
+    onEditBestTime
 }) => {
     // State to track whether the TaskForm is visible
     const [isAddingTask, setIsAddingTask] = useState(false);
@@ -76,6 +194,8 @@ const Goal: React.FC<GoalProps> = ({
     const [editedName, setEditedName] = useState(name);
     // Ref for detecting clicks outside the edit field
     const nameInputRef = useRef<HTMLInputElement>(null);
+    // Create ref for the cancel button
+    const cancelButtonRef = useRef<HTMLButtonElement>(null);
     
     // Use the shared context for goal tasks
     const { goals, addTaskToGoal } = useTaskGoalContext();
@@ -106,13 +226,13 @@ const Goal: React.FC<GoalProps> = ({
         setIsAddingTask(false);
     };
     
-    // Handler for updating the goal name
-    const handleUpdateGoalName = () => {
+    // Handler for updating the goal name - memoize to prevent unnecessary re-renders
+    const handleUpdateGoalName = useCallback(() => {
         if (editedName.trim() !== '' && editedName !== name && onEditGoal) {
             onEditGoal(id, editedName);
         }
         setIsEditingName(false);
-    };
+    }, [editedName, name, onEditGoal, id]);
 
     // Handle Enter key press when editing goal name
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -125,10 +245,25 @@ const Goal: React.FC<GoalProps> = ({
         }
     };
 
+    // Handle canceling the edit with event stopping
+    const handleCancel = useCallback((e?: React.MouseEvent) => {
+        // Stop propagation if event is provided to prevent document click handler from firing
+        if (e) {
+            e.stopPropagation();
+        }
+        
+        setEditedName(name);
+        setIsEditingName(false);
+    }, [name]);
+
     // Setup document click handler when editing name
-    React.useEffect(() => {
+    useEffect(() => {
         const handleDocumentClick = (e: MouseEvent) => {
-            if (nameInputRef.current && !nameInputRef.current.contains(e.target as Node)) {
+            // Check if the click is on the input or on the cancel button
+            const isCancelButtonClick = cancelButtonRef.current && cancelButtonRef.current.contains(e.target as Node);
+            
+            // Only update the goal name if the click is outside both the input and cancel button
+            if (nameInputRef.current && !nameInputRef.current.contains(e.target as Node) && !isCancelButtonClick) {
                 handleUpdateGoalName();
             }
         };
@@ -140,7 +275,7 @@ const Goal: React.FC<GoalProps> = ({
         return () => {
             document.removeEventListener('mousedown', handleDocumentClick);
         };
-    }, [isEditingName, editedName, name]);
+    }, [isEditingName, handleUpdateGoalName]);
 
     return (
         <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
@@ -158,21 +293,10 @@ const Goal: React.FC<GoalProps> = ({
                         />
                         <div className="flex gap-2 mt-1">
                             <Button 
+                                ref={cancelButtonRef}
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={handleUpdateGoalName}
-                                className="h-6 px-2 text-xs text-green-600"
-                            >
-                                <Check size={14} className="mr-1" />
-                                Save
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                    setEditedName(name);
-                                    setIsEditingName(false);
-                                }}
+                                onClick={handleCancel}
                                 className="h-6 px-2 text-xs text-red-500"
                             >
                                 <X size={14} className="mr-1" />
@@ -231,6 +355,8 @@ const Goal: React.FC<GoalProps> = ({
             <BestTimeInfo 
                 title={bestTimeTitle} 
                 description={bestTimeDescription} 
+                goalId={id}
+                onEditBestTime={onEditBestTime}
             />
         </div>
     )
