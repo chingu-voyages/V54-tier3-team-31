@@ -9,7 +9,7 @@ import ActionDropdown from '../ui/action-dropdown'
 import { UseFormReturn } from 'react-hook-form'
 import { GoalWithTasks, TaskFormValues } from '@/lib/types/types'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
-import TaskForm from './TaskForm'
+import TaskForm from './task-form'
 import { Input } from '@/components/ui/input'
 
 // Task type for better type safety 
@@ -278,8 +278,8 @@ const Goal: React.FC<GoalProps> = ({
     }, [isEditingName, handleUpdateGoalName]);
 
     return (
-        <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-            <div className="flex w-full items-center text-xl font-semibold mb-4 justify-between">
+        <div className="flex w-full flex-col items-stretch mt-6 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+            <div className="flex w-full items-center text-xl font-semibold mb-3 justify-between">
                 {isEditingName ? (
                     <div className="flex-1">
                         <Input

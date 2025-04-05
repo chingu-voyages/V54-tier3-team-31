@@ -1,20 +1,19 @@
 'use client'
 
 import React, { useState } from 'react'
-import Goal from './goal'
 import { Plus } from 'lucide-react'
 import { Button } from '../ui/button'
 import PlansHeader from './plans-header'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { TaskFormSchema } from '@/lib/types/validations'
-import Task from './task'
-import { nanoid } from 'nanoid'
 import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
-import TaskForm from './TaskForm'
-import { GoalFormValues, TaskFormValues } from '@/lib/types/types'
+import TaskForm from './task-form'
+import { GoalFormValues, TaskFormValues, } from '@/lib/types/types'
 import { TaskGoalProvider } from '@/hooks/useTaskGoalContext'
+import TaskList from './task-list'
+import GoalsList from './goals-list'
 
 const Plans: React.FC = () => {
     // State to manage the visibility of the add task form
@@ -36,7 +35,12 @@ const Plans: React.FC = () => {
 
     // Handle adding a task, with optional goalId parameter
     const handleAddTask = (values: TaskFormValues, goalId?: number) => {
-        addTask(values, goalId);
+        if (goalId !== undefined) {
+            addTask(values, goalId);
+        } else {
+            addTask(values);
+        }
+        setIsAddingPlan(false);
     }
 
     const handleAddGoal = () => {
@@ -67,37 +71,30 @@ const Plans: React.FC = () => {
                         {/* Task Form - shown when adding a new task */}
                         {isAddingPlan && (
                             <TaskForm
-                                onAddTask={(values) => handleAddTask(values)}
+                                onAddTask={handleAddTask}
                                 onCancel={() => setIsAddingPlan(false)}
                             />
                         )}
 
                         {/* List of user's tasks */}
-                        {planTasks.map((planTask) => (
-                            <Task
-                                key={nanoid()}
-                                {...planTask}
-                                onDeleteTaskClick={deleteTask}
-                                onEditTask={editTask}
-                                form={taskForm}
-                                goalId={undefined}
-                            />
-                        ))}
+                        <TaskList
+                            tasks={planTasks}
+                            form={taskForm}
+                            onDeleteTask={deleteTask}
+                            onEditTask={editTask}
+                        />
 
                         {/* Predefined goals */}
-                        {goals.map((goal) => (
-                            <Goal
-                                key={goal.id}
-                                {...goal}
-                                form={taskForm}
-                                onDeleteGoal={() => deleteGoal(goal.id)}
-                                onDeleteTask={deleteTask}
-                                onEditTask={editTask}
-                                onAddTask={handleAddTask}
-                                onEditGoal={editGoal}
-                                onEditBestTime={editBestTime}
-                            />
-                        ))}
+                        <GoalsList
+                            goals={goals}
+                            form={taskForm}
+                            onDeleteGoal={deleteGoal}
+                            onDeleteTask={deleteTask}
+                            onEditTask={editTask}
+                            onEditGoal={editGoal}
+                            onEditBestTime={editBestTime}
+                            onAddTask={handleAddTask}
+                        />
 
                         {/* Add a Task button - visible on larger screens */}
                         <div className="hidden md:flex mt-8 mb-4 items-center gap-2">
