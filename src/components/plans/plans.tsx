@@ -58,7 +58,7 @@ const Plans: React.FC = () => {
                 {/* Main container */}
                 <div className="flex flex-col flex-1 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full md:pt-8">
                     {/* Mobile Header - Hidden on desktop */}
-                    <div className="sticky top-0 z-10 pb-6 px-4">
+                    <div className="sticky top-0 z-10 pb-0 px-4">
                         <PlansHeader
                             onAddTaskClick={() => setIsAddingPlan(true)}
                             onAddGoalClick={() => handleAddGoal()}
