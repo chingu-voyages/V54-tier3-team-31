@@ -69,24 +69,53 @@ export const saveTasksToLocal = async (tasks: schema.Task[]): Promise<void> => {
     }
 }
 
-export const removeTaskFromLocal = async (taskId: number): Promise<void> => {
+export const removeTaskFromLocal = async ({
+    taskId,
+    goalId,
+}: {
+    taskId: number
+    goalId?: number
+}): Promise<void> => {
     ensureLocalForageConfigured() // Ensure config before use
     if (typeof window === 'undefined') {
         console.warn('Attempted to remove task from localForage on the server.')
         return // Don't run on server
     }
     try {
-        const allPlanTasks = await getAllPLanTasksFromLocal()
-        const updatedPlanTasks = allPlanTasks.filter(
-            (task) => task.id !== taskId
-        )
-        // Only save back if the list actually changed
-        if (updatedPlanTasks.length !== allPlanTasks.length) {
-            await saveTasksToLocal(updatedPlanTasks)
-            console.log(
-                `Task ${taskId} removed from the 'plan-tasks-all' list.`
+        if (!goalId) {
+            const allPlanTasks = await getAllPLanTasksFromLocal()
+            const updatedPlanTasks = allPlanTasks.filter(
+                (task) => task.id !== taskId
             )
-        }
+            // Only save back if the list actually changed
+            if (updatedPlanTasks.length !== allPlanTasks.length) {
+                await saveTasksToLocal(updatedPlanTasks)
+                console.log(
+                    `Task ${taskId} removed from the 'plan-tasks-all' list.`
+                )
+            }
+        } else {
+            // Task belongs to a goal - remove it from the goal's tasks
+            const goals = await getAllGoalsFromLocal()
+            const updatedGoals = goals.map((goal) => {
+                if (goal.id === goalId) {
+                    // Filter out the task to be removed
+                    const updatedTasks = goal.tasks.filter(
+                        (task) => task.id !== taskId
+                    )
+                    // Return the goal with the filtered tasks
+                    return {
+                        ...goal,
+                        tasks: updatedTasks,
+                    }
+                }
+                return goal
+            })
+            
+            // Save the updated goals back to storage
+            await saveGoalsToLocal(updatedGoals)
+            console.log(`Task ${taskId} removed from goal ${goalId} successfully.`)
+        }   
     } catch (err) {
         console.error(`Error removing task ${taskId} from localForage:`, err)
         if (
@@ -131,10 +160,10 @@ export const editTaskFromLocal = async ({
         } else {
             // Task belongs to a goal
             const goals = await getAllGoalsFromLocal()
-            const updatedGoals = goals.map(goal => {
+            const updatedGoals = goals.map((goal) => {
                 if (goal.id === goalId) {
                     // Update the tasks array within this goal
-                    const updatedTasks = goal.tasks.map(task => {
+                    const updatedTasks = goal.tasks.map((task) => {
                         if (task.id === taskId) {
                             return {
                                 ...task,
@@ -143,19 +172,21 @@ export const editTaskFromLocal = async ({
                         }
                         return task
                     })
-                    
+
                     // Return updated goal with modified tasks
                     return {
                         ...goal,
-                        tasks: updatedTasks
+                        tasks: updatedTasks,
                     }
                 }
                 return goal
             })
-            
+
             // Save the updated goals back to storage
             await saveGoalsToLocal(updatedGoals)
-            console.log(`Task ${taskId} in goal ${goalId} updated successfully.`)
+            console.log(
+                `Task ${taskId} in goal ${goalId} updated successfully.`
+            )
         }
     } catch (err) {
         console.error(`Error editing task ${taskId} in localForage:`, err)
@@ -233,6 +264,54 @@ export const removeGoalFromLocal = async (goalId: number): Promise<void> => {
         }
     } catch (err) {
         console.error(`Error removing task ${goalId} from localForage:`, err)
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            )
+        }
+    }
+}
+
+// Add a task to a specific goal
+export const addTaskToGoal = async (
+    task: schema.Task,
+    goalId: number
+): Promise<void> => {
+    ensureLocalForageConfigured() // Ensure config before use
+    if (typeof window === 'undefined') {
+        console.warn(
+            'Attempted to add task to goal from localForage on the server.'
+        )
+        return // Don't run on server
+    }
+
+    try {
+        // Get all goals
+        const goals = await getAllGoalsFromLocal()
+
+        // Find the goal to add the task to
+        const updatedGoals = goals.map((goal) => {
+            if (goal.id === goalId) {
+                // Add the task to this goal's tasks array
+                return {
+                    ...goal,
+                    tasks: [...goal.tasks, { ...task, goalId }],
+                }
+            }
+            return goal
+        })
+
+        // Save the updated goals back to storage
+        await saveGoalsToLocal(updatedGoals)
+        console.log(`Task added to goal ${goalId} successfully.`)
+    } catch (err) {
+        console.error(
+            `Error adding task to goal ${goalId} in localForage:`,
+            err
+        )
         if (
             err instanceof Error &&
             err.message.includes('No available storage method found')

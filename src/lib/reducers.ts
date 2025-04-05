@@ -22,14 +22,12 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
         }
 
         case 'deleted': {
-            removeTaskFromLocal(action.id)
+            removeTaskFromLocal({ taskId: action.id})
             return state.filter((t) => t.id !== action.id)
         }
 
         case 'added': {
             // Create a complete task object with all required properties
-            // Date.now() provides a number based on milliseconds since epoch,
-            // offering high practical uniqueness for client-side generation.
             const newTask: TaskSchema = {
                 ...action.values,
                 userId: nanoid(), // Keep nanoid for userId if it's suitable there
@@ -38,12 +36,24 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 description: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                goalId: 0, // Default goal ID or appropriate value
+                goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
             }
-            const nextTask = [newTask, ...state]
-            saveTasksToLocal(nextTask)
-            return nextTask
+            
+            // If this task belongs to a goal, don't add it to the main tasks array
+            if (action.goalId) {
+                // IMPORTANT: We're removing this code to prevent duplicate task creation
+                // Goal tasks are now handled by the useTaskGoalContext directly
+                // and don't need to be saved again here
+                
+                // Return state unchanged since the task shouldn't be in the main tasks array
+                return state;
+            } else {
+                // This is a regular task, add it to the main tasks array
+                const nextTask = [newTask, ...state];
+                saveTasksToLocal(nextTask);
+                return nextTask;
+            }
         }
         case 'edited': {
             // First, update the task in localForage

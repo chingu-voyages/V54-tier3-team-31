@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { KeyboardEvent, useRef, useEffect, useCallback } from 'react'
 import { Star, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useForm } from 'react-hook-form'
@@ -30,6 +30,7 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
+    const formRef = useRef<HTMLFormElement>(null)
     const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
@@ -39,15 +40,55 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
         },
     })
 
-    const handleSubmit = (values: TaskFormValues) => {
-        onAddTask(values)
-        form.reset()
+    const handleSubmit = useCallback((values: TaskFormValues) => {
+        // Only submit if title is not empty
+        if (values.title && values.title.trim() !== '') {
+            onAddTask(values)
+            form.reset()
+        }
+    }, [onAddTask, form])
+    
+    // Direct handler for the Enter key on the input field
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault() // Stop the default Enter behavior
+            
+            const values = form.getValues()
+            // Simple validation - only submit if we have a title
+            if (values.title && values.title.trim() !== '') {
+                handleSubmit(values)
+            }
+        }
     }
+    
+    // Handler for document clicks - checks if click is outside the form
+    useEffect(() => {
+        const handleDocumentClick = (e: MouseEvent) => {
+            if (formRef.current && !formRef.current.contains(e.target as Node)) {
+                const values = form.getValues()
+                if (values.title && values.title.trim() !== '') {
+                    form.handleSubmit(handleSubmit)()
+                }
+            }
+        }
+        
+        // Add event listener when component mounts
+        document.addEventListener('mousedown', handleDocumentClick)
+        
+        // Clean up event listener when component unmounts
+        return () => {
+            document.removeEventListener('mousedown', handleDocumentClick)
+        }
+    }, [form, handleSubmit])
 
     return (
         <Form {...form}>
             <form
-                onSubmit={form.handleSubmit(handleSubmit)}
+                ref={formRef}
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    form.handleSubmit(handleSubmit)(e)
+                }}
                 className="space-y-4 border-b border-border pb-3 pt-4"
             >
                 <FormField
@@ -68,6 +109,7 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
                                             className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                                             variant="ghost"
                                             autoFocus
+                                            onKeyDown={handleKeyDown}
                                         />
                                     </div>
                                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
@@ -84,6 +126,7 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent"
+                                                                    type="button"
                                                                 >
                                                                     {field.value || 'Frequency'}
                                                                 </Button>
@@ -115,6 +158,7 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent -ml-2"
+                                                                    type="button"
                                                                 >
                                                                     {field.value || 'Duration'}
                                                                 </Button>
@@ -152,6 +196,8 @@ export function TaskForm({ onAddTask, onCancel }: TaskFormProps) {
                         </FormItem>
                     )}
                 />
+                {/* Hidden button to help with form submission */}
+                <button type="submit" style={{ display: 'none' }} />
             </form>
         </Form>
     )

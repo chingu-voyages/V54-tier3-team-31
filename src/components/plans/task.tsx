@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, KeyboardEvent } from 'react'
 import { Star, Trash, WandSparkles } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -25,7 +25,7 @@ interface TaskProps {
     duration?: string | null
     onFrequencyChange?: (newFrequency: string) => void
     onDurationChange?: (newDuration: string) => void
-    onDeleteTaskClick: (taskId: number) => void
+    onDeleteTaskClick: (taskId: number, goalId?: number) => void
     onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
     form: UseFormReturn<TaskFormValues>,
     goalId?: number 
@@ -46,8 +46,8 @@ const Task: React.FC<TaskProps> = ({
     const [isEditing, setIsEditing] = useState(false)
     const formRef = useRef<HTMLDivElement>(null)
     
-    // Access the TaskGoalContext if available
-    const taskGoalContext = goalId ? useTaskGoalContext() : null
+    // Always call the hook, but only use its result if there's a goalId
+    const taskGoalContext = useTaskGoalContext()
 
     // Handler for document clicks - checks if click is outside the form
     const handleDocumentClick = (e: MouseEvent) => {
@@ -55,6 +55,15 @@ const Task: React.FC<TaskProps> = ({
             form.handleSubmit((values) => handleTaskEdit(id, values))()
             setIsEditing(false)
             document.removeEventListener('mousedown', handleDocumentClick)
+        }
+    }
+
+    // Handle Enter key press on the form when editing
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            form.handleSubmit((values) => handleTaskEdit(id, values))()
+            setIsEditing(false)
         }
     }
 
@@ -74,13 +83,17 @@ const Task: React.FC<TaskProps> = ({
 
     // Unified handler for task editing
     const handleTaskEdit = async (taskId: number, values: TaskFormValues) => {
-        if (goalId && taskGoalContext) {
-            // If this is a goal task and we have access to context, use the context method
+        if (goalId) {
+            // If this is a goal task, use the context method first
             await taskGoalContext.updateTaskInGoal(taskId, goalId, values)
-        } else {
-            // Otherwise use the standard method
-            onEditTask(taskId, values, goalId)
         }
+        
+        // Also call the prop method for backward compatibility
+        // This ensures synchronization at both context and parent component levels
+        onEditTask(taskId, values, goalId)
+        
+        // Hide the editing form
+        setIsEditing(false)
     }
 
     // Handle frequency change in non-editing mode
@@ -113,13 +126,32 @@ const Task: React.FC<TaskProps> = ({
         await handleTaskEdit(id, updatedValues)
     }
 
+    // Handle task deletion with proper context sync
+    const handleDeleteTask = () => {
+        if (goalId) {
+            // If it's a goal task, use the context method first if available
+            if (taskGoalContext.removeTaskInGoal) {
+                taskGoalContext.removeTaskInGoal(goalId, id);
+            } else {
+                // Fallback to prop method if context method not available
+                onDeleteTaskClick(id, goalId);
+            }
+        } else {
+            // Regular task deletion (not in a goal)
+            onDeleteTaskClick(id);
+        }
+    }
+
     return (
         <div className="w-full border-b border-border py-3">
             {isEditing ? (
                 <div ref={formRef}>
                     <Form {...form}>
                         <form
-                            onSubmit={form.handleSubmit((values) => handleTaskEdit(id, values))}
+                            onSubmit={(e) => {
+                                e.preventDefault()
+                                form.handleSubmit((values) => handleTaskEdit(id, values))(e)
+                            }}
                             className="space-y-4 border-b border-border pb-3 pt-4"
                         >
                             <FormField
@@ -139,6 +171,8 @@ const Task: React.FC<TaskProps> = ({
                                                         {...field}
                                                         className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                                                         variant="ghost"
+                                                        autoFocus
+                                                        onKeyDown={handleKeyDown}
                                                     />
                                                 </div>
                                                 <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
@@ -239,6 +273,8 @@ const Task: React.FC<TaskProps> = ({
                                     </FormItem>
                                 )}
                             />
+                            {/* Hidden submit button to ensure form can be submitted */}
+                            <button type="submit" style={{ display: 'none' }} />
                         </form>
                     </Form>
                 </div>
@@ -314,12 +350,7 @@ const Task: React.FC<TaskProps> = ({
                             <ActionDropdown iconSize={16}>
                                 <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() => {
-                                        if (id !== undefined) {
-                                            onDeleteTaskClick(id)
-                                        }
-                                    }}
-                                    disabled={id === undefined} // Optionally disable if id is undefined
+                                    onClick={handleDeleteTask}
                                 >
                                     <Trash className="mr-2 h-4 w-4 text-red-400" />
                                     Delete

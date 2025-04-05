@@ -13,7 +13,7 @@ import { nanoid } from 'nanoid'
 import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
 import TaskForm from './TaskForm'
-import { GoalFormValues } from '@/lib/types/types'
+import { GoalFormValues, TaskFormValues } from '@/lib/types/types'
 import { TaskGoalProvider } from '@/hooks/useTaskGoalContext'
 
 const Plans: React.FC = () => {
@@ -33,6 +33,11 @@ const Plans: React.FC = () => {
             duration: '5 mins',
         },
     })
+
+    // Handle adding a task, with optional goalId parameter
+    const handleAddTask = (values: TaskFormValues, goalId?: number) => {
+        addTask(values, goalId);
+    }
 
     const handleAddGoal = () => {
         const values: GoalFormValues = {
@@ -62,7 +67,7 @@ const Plans: React.FC = () => {
                         {/* Task Form - shown when adding a new task */}
                         {isAddingPlan && (
                             <TaskForm
-                                onAddTask={addTask}
+                                onAddTask={(values) => handleAddTask(values)}
                                 onCancel={() => setIsAddingPlan(false)}
                             />
                         )}
@@ -88,6 +93,7 @@ const Plans: React.FC = () => {
                                 onDeleteGoal={() => deleteGoal(goal.id)}
                                 onDeleteTask={deleteTask}
                                 onEditTask={editTask}
+                                onAddTask={handleAddTask}
                             />
                         ))}
 

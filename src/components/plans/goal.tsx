@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Task from './task'
 import { Plus, Trash } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -9,6 +9,7 @@ import ActionDropdown from '../ui/action-dropdown'
 import { UseFormReturn } from 'react-hook-form'
 import { GoalWithTasks, TaskFormValues } from '@/lib/types/types'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
+import TaskForm from './TaskForm'
 
 // Task type for better type safety 
 interface TaskItem {
@@ -45,7 +46,7 @@ interface GoalProps extends Omit<GoalWithTasks, 'tasks'> {
     bestTimeTitle: string | null
     bestTimeDescription: string | null
     form: UseFormReturn<TaskFormValues>
-    onAddTask?: (values: TaskFormValues) => void
+    onAddTask?: (values: TaskFormValues, goalId?: number) => void
     onDeleteTask?: (taskId: number) => void
     onEditTask?: (id: number, values: TaskFormValues, goalId?: number) => void
     onDeleteGoal: () => void
@@ -61,16 +62,40 @@ const Goal: React.FC<GoalProps> = ({
     form,
     onDeleteGoal,
     onDeleteTask,
-    onEditTask
+    onEditTask,
+    onAddTask
 }) => {
+    // State to track whether the TaskForm is visible
+    const [isAddingTask, setIsAddingTask] = useState(false);
+    
     // Use the shared context for goal tasks
-    const { goals } = useTaskGoalContext();
+    const { goals, addTaskToGoal } = useTaskGoalContext();
     
     // Find this goal in the context to ensure we're using the most up-to-date tasks
     const contextGoal = goals.find(g => g.id === id);
     
     // Use tasks from context if available, otherwise use props
     const currentTasks = contextGoal ? contextGoal.tasks : tasks;
+    
+    // Handler for adding a task to this specific goal
+    const handleAddTask = async (values: TaskFormValues) => {
+        // Check if we have a context or direct props
+        if (addTaskToGoal) {
+            // Use the context method (this will handle the synchronization)
+            await addTaskToGoal(values, id);
+        } else if (onAddTask) {
+            // Only use prop method if context method is not available
+            onAddTask(values, id);
+        }
+        
+        // Hide the form after submission
+        setIsAddingTask(false);
+    };
+    
+    // Handler to cancel adding a task
+    const handleCancelAddTask = () => {
+        setIsAddingTask(false);
+    };
 
     return (
         <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
@@ -97,11 +122,19 @@ const Goal: React.FC<GoalProps> = ({
                         goalId={id} /* Pass the goal ID to each task */
                     />
                 ))}
+                
+                {/* Task Form - shown when adding a new task to this goal */}
+                {isAddingTask && (
+                    <TaskForm
+                        onAddTask={handleAddTask}
+                        onCancel={handleCancelAddTask}
+                    />
+                )}
             </div>
             <Button
                 variant="ghost"
                 className="flex items-center gap-2 my-4 py-3"
-                onClick={() => {} }
+                onClick={() => setIsAddingTask(true)}
             >
                 <Plus />
                 <span className="text-sm font-medium">Add</span>
