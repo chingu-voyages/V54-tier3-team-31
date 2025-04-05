@@ -19,7 +19,7 @@ import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 
 interface TaskProps {
-    id: number
+id: number
     title: string
     frequency?: string | null
     duration?: string | null

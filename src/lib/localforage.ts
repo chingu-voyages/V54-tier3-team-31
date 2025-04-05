@@ -275,6 +275,46 @@ export const removeGoalFromLocal = async (goalId: number): Promise<void> => {
     }
 }
 
+// Function to update a goal in localForage
+export const editGoalInLocal = async (
+    goalId: number,
+    updates: Partial<GoalWithTasks>
+): Promise<void> => {
+    ensureLocalForageConfigured() // Ensure config before use
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to edit goal in localForage on the server.')
+        return // Don't run on server
+    }
+    
+    try {
+        const allGoals = await getAllGoalsFromLocal()
+        const updatedGoals = allGoals.map((goal) => {
+            if (goal.id === goalId) {
+                return {
+                    ...goal,
+                    ...updates,
+                    updatedAt: new Date()
+                }
+            }
+            return goal
+        })
+        
+        // Save the updated goals back to storage
+        await saveGoalsToLocal(updatedGoals)
+        console.log(`Goal ${goalId} updated successfully.`)
+    } catch (err) {
+        console.error(`Error updating goal ${goalId} in localForage:`, err)
+        if (
+            err instanceof Error &&
+            err.message.includes('No available storage method found')
+        ) {
+            console.error(
+                'LocalForage could not find a suitable storage driver. Check browser settings/permissions (e.g., private browsing).'
+            )
+        }
+    }
+}
+
 // Add a task to a specific goal
 export const addTaskToGoal = async (
     task: schema.Task,

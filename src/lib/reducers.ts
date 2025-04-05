@@ -133,7 +133,17 @@ export function goalReducer(state: GoalState, action: GoalAction) {
         }
 
         case 'edited': {
-            return state
+            // Update the goal with the values from the action
+            return state.map(goal => {
+                if (goal.id === action.id) {
+                    return {
+                        ...goal,
+                        ...action.values,
+                        updatedAt: new Date()
+                    };
+                }
+                return goal;
+            });
         }
         default:
             throw new Error('Unknown action')

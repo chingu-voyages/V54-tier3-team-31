@@ -1,7 +1,7 @@
 'use client'
 
 import { goalReducer } from "@/lib/reducers";
-import { getAllGoalsFromLocal } from "@/lib/localforage";
+import { getAllGoalsFromLocal, editGoalInLocal } from "@/lib/localforage";
 import { useReducer, useEffect  } from "react";
 import { GoalFormValues } from "@/lib/types/types";
 
@@ -27,8 +27,15 @@ export function useGoalManagement(){
     })
   }
 
-  const editGoal = () => {
+  const editGoal = (id: number, newName: string) => {
+    dispatch({
+      type: 'edited',
+      id,
+      values: { name: newName } // Change to use 'values' property as per the type definition
+    });
     
+    // Also update in local storage
+    editGoalInLocal(id, { name: newName });
   }
 
   const deleteGoal = (id: number) => {

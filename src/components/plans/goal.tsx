@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, KeyboardEvent } from 'react'
 import Task from './task'
-import { Plus, Trash } from 'lucide-react'
+import { Plus, Trash, Check, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DropdownMenuItem } from '../ui/dropdown-menu'
 import ActionDropdown from '../ui/action-dropdown'
@@ -10,6 +10,7 @@ import { UseFormReturn } from 'react-hook-form'
 import { GoalWithTasks, TaskFormValues } from '@/lib/types/types'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 import TaskForm from './TaskForm'
+import { Input } from '@/components/ui/input'
 
 // Task type for better type safety 
 interface TaskItem {
@@ -50,6 +51,7 @@ interface GoalProps extends Omit<GoalWithTasks, 'tasks'> {
     onDeleteTask?: (taskId: number) => void
     onEditTask?: (id: number, values: TaskFormValues, goalId?: number) => void
     onDeleteGoal: () => void
+    onEditGoal?: (goalId: number, newName: string) => void
     id: number
 }
 
@@ -63,10 +65,17 @@ const Goal: React.FC<GoalProps> = ({
     onDeleteGoal,
     onDeleteTask,
     onEditTask,
-    onAddTask
+    onAddTask,
+    onEditGoal
 }) => {
     // State to track whether the TaskForm is visible
     const [isAddingTask, setIsAddingTask] = useState(false);
+    // State to track whether the goal name is being edited
+    const [isEditingName, setIsEditingName] = useState(false);
+    // State to store the edited name
+    const [editedName, setEditedName] = useState(name);
+    // Ref for detecting clicks outside the edit field
+    const nameInputRef = useRef<HTMLInputElement>(null);
     
     // Use the shared context for goal tasks
     const { goals, addTaskToGoal } = useTaskGoalContext();
@@ -96,11 +105,89 @@ const Goal: React.FC<GoalProps> = ({
     const handleCancelAddTask = () => {
         setIsAddingTask(false);
     };
+    
+    // Handler for updating the goal name
+    const handleUpdateGoalName = () => {
+        if (editedName.trim() !== '' && editedName !== name && onEditGoal) {
+            onEditGoal(id, editedName);
+        }
+        setIsEditingName(false);
+    };
+
+    // Handle Enter key press when editing goal name
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleUpdateGoalName();
+        } else if (e.key === 'Escape') {
+            setEditedName(name); // Reset to original name
+            setIsEditingName(false);
+        }
+    };
+
+    // Setup document click handler when editing name
+    React.useEffect(() => {
+        const handleDocumentClick = (e: MouseEvent) => {
+            if (nameInputRef.current && !nameInputRef.current.contains(e.target as Node)) {
+                handleUpdateGoalName();
+            }
+        };
+        
+        if (isEditingName) {
+            document.addEventListener('mousedown', handleDocumentClick);
+        }
+        
+        return () => {
+            document.removeEventListener('mousedown', handleDocumentClick);
+        };
+    }, [isEditingName, editedName, name]);
 
     return (
         <div className="flex w-full flex-col items-stretch mt-6 first:mt-0 border-b border-zinc-200 dark:border-zinc-800 pb-4">
             <div className="flex w-full items-center text-xl font-semibold mb-4 justify-between">
-                <div>{name}</div>
+                {isEditingName ? (
+                    <div className="flex-1">
+                        <Input
+                            ref={nameInputRef}
+                            value={editedName}
+                            onChange={(e) => setEditedName(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="text-xl font-semibold border-none focus-visible:ring-1 p-0 h-auto"
+                            variant="ghost"
+                            autoFocus
+                        />
+                        <div className="flex gap-2 mt-1">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleUpdateGoalName}
+                                className="h-6 px-2 text-xs text-green-600"
+                            >
+                                <Check size={14} className="mr-1" />
+                                Save
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                    setEditedName(name);
+                                    setIsEditingName(false);
+                                }}
+                                className="h-6 px-2 text-xs text-red-500"
+                            >
+                                <X size={14} className="mr-1" />
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div 
+                        className="cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => setIsEditingName(true)}
+                    >
+                        {name}
+                    </div>
+                )}
                 <ActionDropdown iconSize={32}>
                     <DropdownMenuItem 
                         className="text-destructive flex items-center text-sm p-3 font-medium"
