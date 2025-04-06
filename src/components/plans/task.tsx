@@ -175,7 +175,7 @@ const Task: React.FC<TaskProps> = ({
                                 e.preventDefault()
                                 form.handleSubmit((values) => handleTaskEdit(id, values))(e)
                             }}
-                            className="space-y-4 border-b border-border pb-3 pt-4"
+                            className="space-y-4 border-none border-border pb-0 pt-4"
                         >
                             <FormField
                                 control={form.control}

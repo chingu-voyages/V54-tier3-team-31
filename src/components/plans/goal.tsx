@@ -396,6 +396,13 @@ const Goal: React.FC<GoalProps> = ({
                     />
                 ))}
             </div>
+            {/* Task Form - shown when adding a new task to this goal */}
+            {isAddingTask && (
+                <TaskForm
+                    onAddTask={handleAddTask}
+                    onCancel={handleCancelAddTask}
+                />
+            )}
             <Button
                 variant="ghost"
                 className="flex items-center gap-2 my-4 py-3"
@@ -406,13 +413,6 @@ const Goal: React.FC<GoalProps> = ({
                 <div className="flex-grow"></div>
                 <span className="text-zinc-400">⋯</span>
             </Button>
-            {/* Task Form - shown when adding a new task to this goal */}
-            {isAddingTask && (
-                <TaskForm
-                    onAddTask={handleAddTask}
-                    onCancel={handleCancelAddTask}
-                />
-            )}
             <BestTimeInfo
                 title={bestTimeTitle}
                 description={bestTimeDescription}
