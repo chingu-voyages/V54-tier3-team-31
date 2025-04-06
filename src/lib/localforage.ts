@@ -362,3 +362,126 @@ export const addTaskToGoal = async (
         }
     }
 }
+
+// Function to toggle task focus state
+export const toggleTaskFocus = async (taskId: number, isInFocus: boolean): Promise<void> => {
+    ensureLocalForageConfigured()
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to toggle task focus from localForage on the server.')
+        return
+    }
+
+    try {
+        // First check if it's a plan task
+        const allPlanTasks = await getAllPLanTasksFromLocal()
+        const planTaskIndex = allPlanTasks.findIndex(task => task.id === taskId)
+        
+        if (planTaskIndex !== -1) {
+            // Update plan task
+            const updatedTasks = allPlanTasks.map(task => 
+                task.id === taskId ? { ...task, isInFocus } : task
+            )
+            await saveTasksToLocal(updatedTasks)
+            console.log(`Task ${taskId} focus state updated in plan tasks.`)
+            return
+        }
+
+        // If not a plan task, check goals
+        const goals = await getAllGoalsFromLocal()
+        let taskFound = false
+
+        const updatedGoals = goals.map(goal => {
+            const taskIndex = goal.tasks.findIndex(task => task.id === taskId)
+            if (taskIndex !== -1) {
+                taskFound = true
+                const updatedTasks = [...goal.tasks]
+                updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], isInFocus }
+                return { ...goal, tasks: updatedTasks }
+            }
+            return goal
+        })
+
+        if (taskFound) {
+            await saveGoalsToLocal(updatedGoals)
+            console.log(`Task ${taskId} focus state updated in goals.`)
+        } else {
+            console.warn(`Task ${taskId} not found in either plan tasks or goals.`)
+        }
+    } catch (err) {
+        console.error(`Error toggling focus state for task ${taskId}:`, err)
+    }
+}
+
+// Function to get all tasks in focus
+export const getTasksInFocus = async (): Promise<schema.Task[]> => {
+    ensureLocalForageConfigured()
+    if (typeof window === 'undefined') {
+        console.warn('Attempted to get focus tasks from localForage on the server.')
+        return []
+    }
+
+    try {
+        const planTasks = await getAllPLanTasksFromLocal()
+        const goals = await getAllGoalsFromLocal()
+        
+        const focusPlanTasks = planTasks.filter(task => task.isInFocus)
+        const focusGoalTasks = goals.flatMap(goal => 
+            goal.tasks.filter(task => task.isInFocus)
+        )
+
+        return [...focusPlanTasks, ...focusGoalTasks]
+    } catch (err) {
+        console.error('Error getting tasks in focus:', err)
+        return []
+    }
+}
+
+export const updateTaskCompletion = async (
+    taskId: number,
+    completed: boolean,
+    completedAt?: string,
+    goalId?: number
+): Promise<void> => {
+    ensureLocalForageConfigured()
+    if (typeof window === 'undefined') return
+
+    try {
+        if (!goalId) {
+            // Update plan task
+            const allPlanTasks = await getAllPLanTasksFromLocal()
+            const updatedTasks = allPlanTasks.map(task => {
+                if (task.id === taskId) {
+                    return {
+                        ...task,
+                        completed,
+                        completedAt
+                    }
+                }
+                return task
+            })
+            await saveTasksToLocal(updatedTasks)
+        } else {
+            // Update goal task
+            const goals = await getAllGoalsFromLocal()
+            const updatedGoals = goals.map(goal => {
+                if (goal.id === goalId) {
+                    const updatedTasks = goal.tasks.map(task => {
+                        if (task.id === taskId) {
+                            return {
+                                ...task,
+                                completed,
+                                completedAt
+                            }
+                        }
+                        return task
+                    })
+                    return { ...goal, tasks: updatedTasks }
+                }
+                return goal
+            })
+            await saveGoalsToLocal(updatedGoals)
+        }
+    } catch (error) {
+        console.error('Error updating task completion status:', error)
+    }
+}

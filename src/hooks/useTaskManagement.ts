@@ -23,16 +23,22 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
   }, [refreshTasks])
 
   const addTask = (values: z.infer<typeof TaskFormSchema>, goalId?: number) => {
+    // Generate the ID before dispatching
+    const newTaskId = Date.now()
+    
     dispatch({
       type: 'added',
       values,
-      goalId, // Pass the goal ID to the reducer
+      goalId,
+      taskId: newTaskId // Pass the ID to the reducer
     })
     
     // If this task belongs to a goal and we have a callback to refresh goals, call it
     if (goalId && onTaskInGoalUpdated) {
       onTaskInGoalUpdated()
     }
+
+    return newTaskId // Return the ID
   }
 
   const editTask = async (id: number, values: TaskFormValues, goalId?: number) => {
@@ -61,7 +67,7 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
       onTaskInGoalUpdated()
     }
   }
-
+/*  */
   return {
     planTasks,
     addTask,

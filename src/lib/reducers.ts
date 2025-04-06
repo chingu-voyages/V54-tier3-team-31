@@ -18,7 +18,7 @@ import { TaskAction } from '@/lib/types/types'
 export function planTaskReducer(state: TaskState, action: TaskAction) {
     switch (action.type) {
         case 'initial': {
-            return [...state, ...action.planTasks]
+            return action.planTasks
         }
 
         case 'deleted': {
@@ -31,13 +31,14 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
             const newTask: TaskSchema = {
                 ...action.values,
                 userId: nanoid(), // Keep nanoid for userId if it's suitable there
-                id: Date.now(), // Use timestamp for a practically unique numeric ID
+                id: action.taskId || Date.now(), // Use the provided taskId
                 difficulty: null,
                 description: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
+                isInFocus: action.taskId ? true : false,
             }
             
             // If this task belongs to a goal, don't add it to the main tasks array
@@ -108,7 +109,7 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                 frequency: null,
                 userId: nanoid(),
                 bestTimeTitle: action.values.bestTimeTitle ?? null, // Ensure null is used
-                bestTimeDescription: action.values.bestTimeDescription ?? null, // Ensure null is used
+                bestTimeDescription: action.values.bestTimeDescription ?? null,
                 tasks: [
                     {
                         id: Date.now(),
@@ -121,12 +122,13 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                         duration: '5 mins',
                         userId: nanoid(),
                         goalId: null,
-                        completed: false
+                        completed: false,
+                        isInFocus: false
                     }
-
                 ], // Add an empty tasks array to conform to GoalWithTasks
             }
             const nextGoal = [...state, newGoal]
+           
             saveGoalsToLocal(nextGoal)
            
             return nextGoal

@@ -14,7 +14,12 @@ export type TaskAction =
           id: number
           goalId?: number
       }
-    | { type: 'added'; values: TaskFormValues; goalId?: number }
+    | { 
+          type: 'added'; 
+          values: TaskFormValues; 
+          goalId?: number;
+          taskId?: number;
+      }
     | { type: 'initial'; planTasks: schema.Task[] }
     | { type: 'edited'; values: TaskFormValues; id: number; goalId?: number }
 

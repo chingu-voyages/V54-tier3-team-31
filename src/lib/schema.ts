@@ -130,6 +130,7 @@ export const tasks = pgTable('task', {
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     completed: boolean('completed').default(false), // Keep completion status on the task itself
     description: text('description'),
+    isInFocus: boolean('is_in_focus').default(false), // New field to track if task is in focus
 })
 
 // Relations

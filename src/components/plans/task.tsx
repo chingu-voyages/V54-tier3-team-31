@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, KeyboardEvent } from 'react'
+import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
 import { Star, Trash, WandSparkles } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -17,9 +17,10 @@ import { UseFormReturn } from 'react-hook-form'
 import { TaskFormValues } from '@/lib/types/types'
 import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
+import { toggleTaskFocus } from "@/lib/localforage"
 
 interface TaskProps {
-id: number
+    id: number
     title: string
     frequency?: string | null
     duration?: string | null
@@ -28,7 +29,8 @@ id: number
     onDeleteTaskClick: (taskId: number, goalId?: number) => void
     onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
     form: UseFormReturn<TaskFormValues>,
-    goalId?: number 
+    goalId?: number
+    isInFocus?: boolean
 }
 
 const Task: React.FC<TaskProps> = ({
@@ -41,11 +43,18 @@ const Task: React.FC<TaskProps> = ({
     onDeleteTaskClick,
     onEditTask,
     form,
-    goalId
+    goalId,
+    isInFocus: propIsInFocus = false
 }) => {
     const [isEditing, setIsEditing] = useState(false)
+    const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
     const formRef = useRef<HTMLDivElement>(null)
     
+    // Update local state when prop changes
+    useEffect(() => {
+        setLocalIsInFocus(propIsInFocus)
+    }, [propIsInFocus])
+
     // Always call the hook, but only use its result if there's a goalId
     const taskGoalContext = useTaskGoalContext()
 
@@ -142,6 +151,20 @@ const Task: React.FC<TaskProps> = ({
         }
     }
 
+    // Handle star button click
+    const handleStarClick = async (e: React.MouseEvent) => {
+        e.stopPropagation() // Prevent triggering the edit mode
+        try {
+            // Update local state immediately for instant feedback
+            setLocalIsInFocus(!localIsInFocus)
+            await toggleTaskFocus(id, !localIsInFocus)
+        } catch (error) {
+            // Revert local state if there's an error
+            setLocalIsInFocus(localIsInFocus)
+            console.error("Error toggling task focus:", error)
+        }
+    }
+
     return (
         <div className="w-full border-b border-border py-3">
             {isEditing ? (
@@ -164,7 +187,8 @@ const Task: React.FC<TaskProps> = ({
                                                 <div className="flex w-full items-center gap-2 text-base text-foreground font-medium">
                                                     <Star
                                                         strokeWidth={1.5}
-                                                        className="text-neutral-500"
+                                                        className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
+                                                        onClick={handleStarClick}
                                                     />
                                                     <Input
                                                         placeholder="Your Task"
@@ -284,7 +308,11 @@ const Task: React.FC<TaskProps> = ({
                         className="flex w-full items-center gap-2 text-base text-foreground font-medium cursor-pointer"
                         onClick={() => toggleEditing(true)}
                     >
-                        <Star strokeWidth={1.5} className="text-neutral-500" />
+                        <Star 
+                            strokeWidth={1.5} 
+                            className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
+                            onClick={handleStarClick}
+                        />
                         <div className="self-stretch my-auto">{title}</div>
                     </div>
                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">

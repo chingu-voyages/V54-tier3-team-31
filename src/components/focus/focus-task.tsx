@@ -1,61 +1,160 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState } from "react"
-import type { UseFormReturn } from "react-hook-form"
-import type { TaskFormValues } from "@/lib/types/types"
-import { Checkbox } from "../ui/checkbox"
-import { MoreHorizontal, Sparkles } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
+import type React from 'react'
+import { useEffect, useState } from 'react'
+import type { UseFormReturn } from 'react-hook-form'
+import type { TaskFormValues } from '@/lib/types/types'
+import { Checkbox } from '../ui/checkbox'
+import { Button } from '../ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu'
+import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
+import { WandSparkles, Trash } from 'lucide-react'
+import ActionDropdown from '../ui/action-dropdown'
 
 interface FocusTaskProps {
-  id: number
-  title: string
-  frequency: string
-  duration: string
-  completed: boolean
-  form: UseFormReturn<TaskFormValues>
+    id: number
+    title: string
+    frequency: string
+    duration: string
+    completed: boolean
+    form: UseFormReturn<TaskFormValues>
+    onToggleFocus?: (taskId: number, isInFocus: boolean) => void
+    onTaskComplete?: (
+        taskId: number,
+        completed: boolean,
+        completedAt?: Date
+    ) => void
+    onFrequencyChange?: (taskId: number, newFrequency: string) => void
+    onDurationChange?: (taskId: number, newDuration: string) => void
+    onDeleteTask?: (taskId: number) => void
 }
 
-const FocusTask: React.FC<FocusTaskProps> = ({ id, title, frequency, duration, completed, form }) => {
-  const [isChecked, setIsChecked] = useState(completed)
+const FocusTask: React.FC<FocusTaskProps> = ({
+    id,
+    title,
+    frequency,
+    duration,
+    completed: initialCompleted,
+    onTaskComplete,
+    onFrequencyChange,
+    onDurationChange,
+    onDeleteTask,
+}) => {
+    const [isChecked, setIsChecked] = useState(initialCompleted)
 
-  return (
-    <div className="mb-4">
-      <div className="flex items-center gap-3 mb-2">
-        <Checkbox
-          checked={isChecked}
-          onCheckedChange={(checked) => setIsChecked(checked as boolean)}
-          className="h-5 w-5 rounded-full border-zinc-600 data-[state=checked]:bg-white data-[state=checked]:text-black"
-        />
-        <span className={`flex-1 text-white ${isChecked ? "line-through text-zinc-500" : ""}`}>{title}</span>
-      </div>
-      <div className="flex items-center justify-between pl-8">
-        <div className="flex gap-2">
-          <span className="text-xs bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full">{frequency}</span>
-          <span className="text-xs bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full">{duration}</span>
+    useEffect(() => {
+        setIsChecked(initialCompleted)
+    }, [initialCompleted])
+
+    const handleCheckboxChange = async (checked: boolean) => {
+        setIsChecked(checked)
+        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
+    }
+
+    const handleFrequencyChange = (newFrequency: string) => {
+        onFrequencyChange?.(id, newFrequency)
+    }
+
+    const handleDurationChange = (newDuration: string) => {
+        onDurationChange?.(id, newDuration)
+    }
+
+    const handleDeleteTask = () => {
+        onDeleteTask?.(id)
+    }
+
+    return (
+        <div className="mb-4">
+            <div className="flex items-center gap-3">
+                <Checkbox
+                    checked={isChecked}
+                    onCheckedChange={handleCheckboxChange}
+                    className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                />
+                <span
+                    className={`flex-1 text-zinc-100 ${isChecked ? 'line-through text-zinc-500' : ''}`}
+                >
+                    {title}
+                </span>
+            </div>
+            <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
+                <div className="self-stretch flex items-center gap-4 my-auto">
+                    {/* Frequency Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent"
+                            >
+                                {frequency}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            {FREQUENCY_OPTIONS.map((option) => (
+                                <DropdownMenuItem
+                                    key={option}
+                                    onSelect={() => handleFrequencyChange(option)}
+                                >
+                                    {option}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Duration Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent -ml-2"
+                            >
+                                {duration?.length === 0
+                                    ? 'None'
+                                    : duration}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            {DURATION_OPTIONS.map((option) => (
+                                <DropdownMenuItem
+                                    key={option}
+                                    onSelect={() => handleDurationChange(option)}
+                                >
+                                    {option}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        className="flex items-center gap-1 whitespace-nowrap"
+                    >
+                        <div className="w-4 h-4 text-primary">
+                            <WandSparkles size={16} />
+                        </div>
+                        <div>Simpler</div>
+                    </Button>
+                    <ActionDropdown iconSize={16}>
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={handleDeleteTask}
+                        >
+                            <Trash className="mr-2 h-4 w-4 text-red-400" />
+                            Delete
+                        </DropdownMenuItem>
+                    </ActionDropdown>
+                </div>
+            </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs text-zinc-400">
-            <Sparkles className="h-4 w-4" />
-            <span>Simpler</span>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="h-8 w-8 flex items-center justify-center text-zinc-400">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-              <DropdownMenuItem className="text-zinc-300">Edit</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-500">Delete</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </div>
-  )
+    )
 }
 
 export default FocusTask
-
