@@ -25,6 +25,14 @@ interface TaskItem {
     title: string
     frequency?: string | null
     duration?: string | null
+    completed?: boolean | null
+    difficulty?: string | null
+    description?: string | null
+    createdAt?: Date
+    updatedAt?: Date
+    userId?: string
+    goalId?: number | null
+    isInFocus?: boolean | null
 }
 
 // BestTime component for displaying best time information
@@ -208,6 +216,8 @@ interface GoalProps extends Omit<GoalWithTasks, 'tasks'> {
         updates: { bestTimeTitle?: string; bestTimeDescription?: string }
     ) => void
     id: number
+    useCheckbox?: boolean
+    onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
 }
 
 const Goal: React.FC<GoalProps> = ({
@@ -223,6 +233,8 @@ const Goal: React.FC<GoalProps> = ({
     onAddTask,
     onEditGoal,
     onEditBestTime,
+    useCheckbox = false,
+    onTaskComplete
 }) => {
     // State to track whether the TaskForm is visible
     const [isAddingTask, setIsAddingTask] = useState(false)
@@ -393,6 +405,9 @@ const Goal: React.FC<GoalProps> = ({
                         form={form}
                         goalId={id}
                         isInFocus={focusTasks.includes(task.id)}
+                        useCheckbox={useCheckbox}
+                        onTaskComplete={onTaskComplete}
+                        completed={task.completed || false}
                     />
                 ))}
             </div>

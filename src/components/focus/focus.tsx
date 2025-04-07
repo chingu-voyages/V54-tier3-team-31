@@ -4,7 +4,7 @@ import type React from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useEffect, useState } from 'react'
-import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus } from '@/lib/localforage'
+import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus, cleanupOldFocusTasks } from '@/lib/localforage'
 import type { Task } from '@/lib/schema'
 import type { TaskFormValues } from '@/lib/types/types'
 import FocusTask from './focus-task'
@@ -24,14 +24,13 @@ import GoalsList from '../plans/goals-list'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { TaskFormSchema } from '@/lib/types/validations'
 
-// Extend the Task type for our local usage
 type TaskWithMeta = Task & {
-    completedAt?: string; // Store as ISO string
+    isInFocus: boolean | null
+    completedAt: Date | null
 }
 
 const Focus: React.FC = () => {
-    const [focusTasks, setFocusTasks] = useState<TaskWithMeta[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const [tasks, setTasks] = useState<TaskWithMeta[]>([])
     const [isAddingPlan, setIsAddingPlan] = useState(false)
     const { addTask, editTask, deleteTask } = useTaskManagement()
     const { goals, addGoal, editGoal, deleteGoal, editBestTime } = useGoalManagement()
@@ -45,65 +44,38 @@ const Focus: React.FC = () => {
     })
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const tasks = await getTasksInFocus()
-                
-                // Filter out tasks that were completed yesterday or before
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                
-                const filteredTasks = (tasks as TaskWithMeta[]).filter(task => {
-                    if (!task.completed) return true
-                    if (!task.completedAt) return true
-                    const completedDate = new Date(task.completedAt)
-                    return completedDate >= today
-                })
-                
-                setFocusTasks(filteredTasks)
-            } catch (error) {
-                console.error('Error fetching data:', error)
-            } finally {
-                setIsLoading(false)
-            }
+        const loadTasks = async () => {
+            await cleanupOldFocusTasks()
+            const tasksInFocus = await getTasksInFocus()
+            setTasks(tasksInFocus)
         }
-
-        fetchData()
+        loadTasks()
     }, [])
 
-    const handleTaskComplete = async (taskId: number, completed: boolean, completedAt?: Date) => {
+    const handleTaskComplete = async (taskId: number, completed: boolean) => {
         try {
             // Find the task to get its goalId
-            const task = focusTasks.find(t => t.id === taskId)
+            const task = tasks.find(t => t.id === taskId)
             if (!task) return
 
             // Update local state first for immediate feedback
-            setFocusTasks(prev => 
+            setTasks(prev => 
                 prev.map(t => 
                     t.id === taskId 
-                        ? { 
-                            ...t, 
-                            completed, 
-                            completedAt: completed ? completedAt?.toISOString() : undefined 
-                        }
+                        ? { ...t, completed, completedAt: completed ? new Date() : null }
                         : t
                 )
             )
 
             // Persist to storage
-            await updateTaskCompletion(
-                taskId,
-                completed,
-                completed ? completedAt?.toISOString() : undefined,
-                task.goalId || undefined
-            )
+            await updateTaskCompletion(taskId, completed, task.goalId ? String(task.goalId) : undefined)
         } catch (error) {
             console.error('Error updating task completion:', error)
             // Revert local state on error
-            setFocusTasks(prev => 
+            setTasks(prev => 
                 prev.map(t => 
                     t.id === taskId 
-                        ? { ...t, completed: !completed, completedAt: undefined }
+                        ? { ...t, completed: !completed, completedAt: completed ? null : new Date() }
                         : t
                 )
             )
@@ -111,13 +83,13 @@ const Focus: React.FC = () => {
     }
 
     // Group tasks by goal name
-    const groupedTasks = focusTasks.reduce((acc, task) => {
+    const groupedTasks = tasks.reduce((acc, task) => {
         if (!task.goalId) {
             // This is a Plan Task
-            if (!acc['Plan Tasks']) {
-                acc['Plan Tasks'] = []
+            if (!acc['Plans']) {
+                acc['Plans'] = []
             }
-            acc['Plan Tasks'].push(task)
+            acc['Plans'].push(task)
         } else {
             // This is a Goal Task
             const goal = goals.find(g => g.id === task.goalId)
@@ -139,7 +111,7 @@ const Focus: React.FC = () => {
             await toggleTaskFocus(newTaskId, true)
             // Refresh the focus tasks list
             const updatedTasks = await getTasksInFocus()
-            setFocusTasks(updatedTasks)
+            setTasks(updatedTasks)
             setIsAddingPlan(false)
         } catch (error) {
             console.error('Error adding task to focus:', error)
@@ -158,11 +130,11 @@ const Focus: React.FC = () => {
     // Handler for frequency change
     const handleFrequencyChange = async (taskId: number, newFrequency: string) => {
         // Find the task to get its goalId
-        const task = focusTasks.find(t => t.id === taskId)
+        const task = tasks.find(t => t.id === taskId)
         if (!task) return
 
         // Update local state first for immediate feedback
-        setFocusTasks(prev => 
+        setTasks(prev => 
             prev.map(t => 
                 t.id === taskId 
                     ? { ...t, frequency: newFrequency }
@@ -184,7 +156,7 @@ const Focus: React.FC = () => {
         } catch (error) {
             console.error('Error updating task frequency:', error)
             // Revert local state on error
-            setFocusTasks(prev => 
+            setTasks(prev => 
                 prev.map(t => 
                     t.id === taskId 
                         ? { ...t, frequency: task.frequency || 'Once' }
@@ -197,11 +169,11 @@ const Focus: React.FC = () => {
     // Handler for duration change
     const handleDurationChange = async (taskId: number, newDuration: string) => {
         // Find the task to get its goalId
-        const task = focusTasks.find(t => t.id === taskId)
+        const task = tasks.find(t => t.id === taskId)
         if (!task) return
 
         // Update local state first for immediate feedback
-        setFocusTasks(prev => 
+        setTasks(prev => 
             prev.map(t => 
                 t.id === taskId 
                     ? { ...t, duration: newDuration }
@@ -223,7 +195,7 @@ const Focus: React.FC = () => {
         } catch (error) {
             console.error('Error updating task duration:', error)
             // Revert local state on error
-            setFocusTasks(prev => 
+            setTasks(prev => 
                 prev.map(t => 
                     t.id === taskId 
                         ? { ...t, duration: task.duration || '5 mins' }
@@ -235,12 +207,12 @@ const Focus: React.FC = () => {
 
     // Handler for task deletion
     const handleDeleteTask = async (taskId: number) => {
-        const task = focusTasks.find(t => t.id === taskId)
+        const task = tasks.find(t => t.id === taskId)
         if (!task) return
 
         try {
             // Update local state first
-            setFocusTasks(prev => prev.filter(t => t.id !== taskId))
+            setTasks(prev => prev.filter(t => t.id !== taskId))
 
             // Persist to storage
             await deleteTask(
@@ -250,18 +222,18 @@ const Focus: React.FC = () => {
         } catch (error) {
             console.error('Error deleting task:', error)
             // Revert local state on error
-            setFocusTasks(prev => [...prev, task])
+            setTasks(prev => [...prev, task])
         }
     }
 
     // Handler for task editing
     const handleEditTask = async (taskId: number, values: TaskFormValues) => {
-        const task = focusTasks.find(t => t.id === taskId)
+        const task = tasks.find(t => t.id === taskId)
         if (!task) return
 
         try {
             // Update local state first
-            setFocusTasks(prev => prev.map(t => 
+            setTasks(prev => prev.map(t => 
                 t.id === taskId 
                     ? { ...t, ...values }
                     : t
@@ -276,7 +248,7 @@ const Focus: React.FC = () => {
         } catch (error) {
             console.error('Error editing task:', error)
             // Revert local state on error
-            setFocusTasks(prev => prev.map(t => 
+            setTasks(prev => prev.map(t => 
                 t.id === taskId 
                     ? task
                     : t
@@ -310,10 +282,6 @@ const Focus: React.FC = () => {
             href: '/add-plans-ai',
         },
     ]
-
-    if (isLoading) {
-        return <div>Loading...</div>
-    }
 
     return (
         <TaskGoalProvider>
@@ -404,7 +372,7 @@ const Focus: React.FC = () => {
                                     )}
                                 </div>
                             ))}
-                            {focusTasks.length === 0 && (
+                            {tasks.length === 0 && (
                                 <p className="text-zinc-400 text-sm">
                                     No tasks in focus. Click the star icon on tasks
                                     to add them here.
@@ -424,6 +392,8 @@ const Focus: React.FC = () => {
                             onEditGoal={handleEditGoal}
                             onEditBestTime={handleEditBestTime}
                             onAddTask={handleAddTask}
+                            useCheckbox={true}
+                            onTaskComplete={handleTaskComplete}
                         />
                     </div>
                 </div>

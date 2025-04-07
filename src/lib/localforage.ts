@@ -424,9 +424,44 @@ export const getTasksInFocus = async (): Promise<schema.Task[]> => {
         const planTasks = await getAllPLanTasksFromLocal()
         const goals = await getAllGoalsFromLocal()
         
-        const focusPlanTasks = planTasks.filter(task => task.isInFocus)
+        // Get current date at midnight for comparison
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        // Filter plan tasks that are in focus and either not completed or completed today
+        const focusPlanTasks = planTasks.filter(task => {
+            if (!task.isInFocus) return false
+            if (!task.completed) return true
+            
+            // If task has completedAt timestamp, check if it was completed today
+            if (task.completedAt) {
+                const completedDate = task.completedAt instanceof Date 
+                    ? task.completedAt 
+                    : new Date(task.completedAt);
+                
+                return completedDate >= today
+            }
+            
+            return true
+        })
+        
+        // Filter goal tasks that are in focus and either not completed or completed today
         const focusGoalTasks = goals.flatMap(goal => 
-            goal.tasks.filter(task => task.isInFocus)
+            goal.tasks.filter(task => {
+                if (!task.isInFocus) return false
+                if (!task.completed) return true
+                
+                // If task has completedAt timestamp, check if it was completed today
+                if (task.completedAt) {
+                    const completedDate = task.completedAt instanceof Date 
+                        ? task.completedAt 
+                        : new Date(task.completedAt);
+                    
+                    return completedDate >= today
+                }
+                
+                return true
+            })
         )
 
         return [...focusPlanTasks, ...focusGoalTasks]
@@ -446,6 +481,9 @@ export const updateTaskCompletion = async (
     if (typeof window === 'undefined') return
 
     try {
+        // Convert string to Date if provided
+        const completedAtDate = completedAt ? new Date(completedAt) : null;
+        
         if (!goalId) {
             // Update plan task
             const allPlanTasks = await getAllPLanTasksFromLocal()
@@ -454,7 +492,7 @@ export const updateTaskCompletion = async (
                     return {
                         ...task,
                         completed,
-                        completedAt
+                        completedAt: completedAtDate
                     }
                 }
                 return task
@@ -470,7 +508,7 @@ export const updateTaskCompletion = async (
                             return {
                                 ...task,
                                 completed,
-                                completedAt
+                                completedAt: completedAtDate
                             }
                         }
                         return task
@@ -483,5 +521,78 @@ export const updateTaskCompletion = async (
         }
     } catch (error) {
         console.error('Error updating task completion status:', error)
+    }
+}
+
+// Function to automatically remove tasks from focus after 24 hours
+export const cleanupOldFocusTasks = async (): Promise<void> => {
+    ensureLocalForageConfigured()
+    if (typeof window === 'undefined') return
+
+    try {
+        // Get current date at midnight for comparison
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        // Get yesterday's date
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+        
+        // Update plan tasks
+        const allPlanTasks = await getAllPLanTasksFromLocal()
+        let planTasksUpdated = false
+        
+        const updatedPlanTasks = allPlanTasks.map(task => {
+            // If task is completed and completed more than 24 hours ago, remove from focus
+            if (task.completed && task.completedAt) {
+                const completedDate = task.completedAt instanceof Date 
+                    ? task.completedAt 
+                    : new Date(task.completedAt);
+                
+                if (completedDate < yesterday) {
+                    planTasksUpdated = true
+                    return { ...task, isInFocus: false }
+                }
+            }
+            return task
+        })
+        
+        if (planTasksUpdated) {
+            await saveTasksToLocal(updatedPlanTasks)
+        }
+        
+        // Update goal tasks
+        const goals = await getAllGoalsFromLocal()
+        let goalsUpdated = false
+        
+        const updatedGoals = goals.map(goal => {
+            let tasksUpdated = false
+            const updatedTasks = goal.tasks.map(task => {
+                // If task is completed and completed more than 24 hours ago, remove from focus
+                if (task.completed && task.completedAt) {
+                    const completedDate = task.completedAt instanceof Date 
+                        ? task.completedAt 
+                        : new Date(task.completedAt);
+                    
+                    if (completedDate < yesterday) {
+                        tasksUpdated = true
+                        return { ...task, isInFocus: false }
+                    }
+                }
+                return task
+            })
+            
+            if (tasksUpdated) {
+                goalsUpdated = true
+                return { ...goal, tasks: updatedTasks }
+            }
+            return goal
+        })
+        
+        if (goalsUpdated) {
+            await saveGoalsToLocal(updatedGoals)
+        }
+    } catch (error) {
+        console.error('Error cleaning up old focus tasks:', error)
     }
 }

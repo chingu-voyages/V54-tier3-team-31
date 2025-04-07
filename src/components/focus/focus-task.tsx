@@ -135,8 +135,7 @@ const FocusTask: React.FC<FocusTaskProps> = ({
                                         <FormControl>
                                             <div>
                                                 <div className="flex w-full items-center gap-2 text-base text-foreground font-medium">
-                                                    <Checkbox
-                                                        checked={isChecked}
+                                                    <Checkbox checked={isChecked}
                                                         onCheckedChange={handleCheckboxChange}
                                                         className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
                                                     />

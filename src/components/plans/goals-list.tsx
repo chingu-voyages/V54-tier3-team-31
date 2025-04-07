@@ -14,6 +14,8 @@ interface GoalsListProps {
     onEditGoal: (id: number, newName: string) => void
     onEditBestTime: (id: number, updates: { bestTimeTitle?: string, bestTimeDescription?: string }) => void
     onAddTask: (values: TaskFormValues, goalId?: number) => void
+    useCheckbox?: boolean
+    onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
 }
 
 export const GoalsList: React.FC<GoalsListProps> = ({ 
@@ -24,7 +26,9 @@ export const GoalsList: React.FC<GoalsListProps> = ({
     onEditTask, 
     onEditGoal, 
     onEditBestTime,
-    onAddTask 
+    onAddTask,
+    useCheckbox = false,
+    onTaskComplete
 }) => {
     if (!goals.length) {
         return null
@@ -43,6 +47,8 @@ export const GoalsList: React.FC<GoalsListProps> = ({
                     onAddTask={onAddTask}
                     onEditGoal={onEditGoal}
                     onEditBestTime={onEditBestTime}
+                    useCheckbox={useCheckbox}
+                    onTaskComplete={onTaskComplete}
                 />
             ))}
         </div>

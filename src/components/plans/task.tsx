@@ -18,6 +18,7 @@ import { TaskFormValues } from '@/lib/types/types'
 import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 import { toggleTaskFocus } from "@/lib/localforage"
+import { Checkbox } from '../ui/checkbox'
 
 interface TaskProps {
     id: number
@@ -31,6 +32,9 @@ interface TaskProps {
     form: UseFormReturn<TaskFormValues>,
     goalId?: number
     isInFocus?: boolean
+    useCheckbox?: boolean
+    onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
+    completed?: boolean
 }
 
 const Task: React.FC<TaskProps> = ({
@@ -44,16 +48,21 @@ const Task: React.FC<TaskProps> = ({
     onEditTask,
     form,
     goalId,
-    isInFocus: propIsInFocus = false
+    isInFocus: propIsInFocus = false,
+    useCheckbox = false,
+    onTaskComplete,
+    completed = false
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
+    const [isChecked, setIsChecked] = useState(completed)
     const formRef = useRef<HTMLDivElement>(null)
     
     // Update local state when prop changes
     useEffect(() => {
         setLocalIsInFocus(propIsInFocus)
-    }, [propIsInFocus])
+        setIsChecked(completed)
+    }, [propIsInFocus, completed])
 
     // Always call the hook, but only use its result if there's a goalId
     const taskGoalContext = useTaskGoalContext()
@@ -165,6 +174,12 @@ const Task: React.FC<TaskProps> = ({
         }
     }
 
+    // Handle checkbox change
+    const handleCheckboxChange = async (checked: boolean) => {
+        setIsChecked(checked)
+        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
+    }
+
     return (
         <div className="w-full border-b border-border py-3">
             {isEditing ? (
@@ -185,11 +200,19 @@ const Task: React.FC<TaskProps> = ({
                                         <FormControl>
                                             <div>
                                                 <div className="flex w-full items-center gap-2 text-base text-foreground font-medium">
-                                                    <Star
-                                                        strokeWidth={1.5}
-                                                        className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
-                                                        onClick={handleStarClick}
-                                                    />
+                                                    {useCheckbox ? (
+                                                        <Checkbox 
+                                                            checked={isChecked}
+                                                            onCheckedChange={handleCheckboxChange}
+                                                            className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                                                        />
+                                                    ) : (
+                                                        <Star
+                                                            strokeWidth={1.5}
+                                                            className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
+                                                            onClick={handleStarClick}
+                                                        />
+                                                    )}
                                                     <Input
                                                         placeholder="Your Task"
                                                         {...field}
@@ -308,12 +331,20 @@ const Task: React.FC<TaskProps> = ({
                         className="flex w-full items-center gap-2 text-base text-foreground font-medium cursor-pointer"
                         onClick={() => toggleEditing(true)}
                     >
-                        <Star 
-                            strokeWidth={1.5} 
-                            className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
-                            onClick={handleStarClick}
-                        />
-                        <div className="self-stretch my-auto">{title}</div>
+                        {useCheckbox ? (
+                            <Checkbox 
+                                checked={isChecked}
+                                onCheckedChange={handleCheckboxChange}
+                                className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                            />
+                        ) : (
+                            <Star 
+                                strokeWidth={1.5} 
+                                className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
+                                onClick={handleStarClick}
+                            />
+                        )}
+                        <div className={`self-stretch my-auto ${isChecked ? 'line-through text-zinc-500' : ''}`}>{title}</div>
                     </div>
                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
                         <div className="self-stretch flex items-center gap-4 my-auto">
