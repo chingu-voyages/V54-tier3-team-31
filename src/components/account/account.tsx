@@ -90,8 +90,6 @@ const Account: React.FC = () => {
                 </CardContent>
             </Card>
 
-            <div>Waitlist</div>
-
             {/* Team Members Section */}
             <Card className="mt-8 bg-neutral-900 rounded-[6px] border-neutral-700 border py-6 px-6 md:px-3">
                 <CardContent className="px-0">
