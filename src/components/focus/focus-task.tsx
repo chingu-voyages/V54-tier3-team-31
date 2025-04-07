@@ -236,7 +236,7 @@ const FocusTask: React.FC<FocusTaskProps> = ({
                                                             <Trash className="mr-2 h-4 w-4 text-red-400" />
                                                             Cancel
                                                         </DropdownMenuItem>
-                                                        {/* Consider adding a Save button here or rely on Enter */}
+                                                        {/* Consider addinfg a Save button here or rely on Enter */}
                                                     </ActionDropdown>
                                                 </div>
                                             </div>

@@ -68,7 +68,7 @@ const Focus: React.FC = () => {
             )
 
             // Persist to storage
-            await updateTaskCompletion(taskId, completed, task.goalId ? String(task.goalId) : undefined)
+            await updateTaskCompletion(taskId, completed, task.goalId || undefined)
         } catch (error) {
             console.error('Error updating task completion:', error)
             // Revert local state on error
@@ -314,7 +314,7 @@ const Focus: React.FC = () => {
                     </div>
 
                     {/* Focus Tasks Section */}
-                    <div className="mb-6">
+                    <div>
                         {/* Task Form - shown when adding a new task */}
                         {isAddingPlan && (
                             <TaskForm
@@ -356,12 +356,12 @@ const Focus: React.FC = () => {
                                             />
                                         ))}
                                     </div>
-                                    <div className="mt-4">
+                                    {/* <div className="mt-4">
                                         <button className="flex items-center text-zinc-400 text-sm">
                                             <span className="mr-2">+</span>
                                             add
                                         </button>
-                                    </div>
+                                    </div> */}
                                     {goalName !== 'Plan Tasks' && goals.find(g => g.name === goalName)?.bestTimeTitle && (
                                         <div className="mt-4 bg-zinc-900 rounded-lg p-4">
                                             <h3 className="text-sm font-medium mb-1">Best Time</h3>

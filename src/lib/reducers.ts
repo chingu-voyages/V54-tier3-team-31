@@ -38,6 +38,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 updatedAt: new Date(),
                 goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
+                completedAt: null, // Add the completedAt property
                 isInFocus: action.taskId ? true : false,
             }
             
@@ -76,6 +77,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                         return {
                             ...t,
                             ...action.values,
+                            completedAt: t.completedAt, // Preserve the completedAt property
                         }
                     }
                     return t
@@ -123,12 +125,12 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                         userId: nanoid(),
                         goalId: null,
                         completed: false,
+                        completedAt: null,
                         isInFocus: false
                     }
                 ], // Add an empty tasks array to conform to GoalWithTasks
             }
             const nextGoal = [...state, newGoal]
-           
             saveGoalsToLocal(nextGoal)
            
             return nextGoal

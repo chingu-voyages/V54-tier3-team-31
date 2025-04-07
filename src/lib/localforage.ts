@@ -474,7 +474,6 @@ export const getTasksInFocus = async (): Promise<schema.Task[]> => {
 export const updateTaskCompletion = async (
     taskId: number,
     completed: boolean,
-    completedAt?: string,
     goalId?: number
 ): Promise<void> => {
     ensureLocalForageConfigured()
@@ -482,7 +481,7 @@ export const updateTaskCompletion = async (
 
     try {
         // Convert string to Date if provided
-        const completedAtDate = completedAt ? new Date(completedAt) : null;
+        const completedAtDate = completed ? new Date() : null;
         
         if (!goalId) {
             // Update plan task

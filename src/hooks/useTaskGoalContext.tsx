@@ -58,6 +58,8 @@ export const TaskGoalProvider: React.FC<{ children: React.ReactNode }> = ({
                     difficulty: null,
                     description: null,
                     completed: false,
+                    completedAt: null, // Add the completedAt property
+                    isInFocus: false, // Add the isInFocus property
                 }
 
                 // Add the task to the goal in localForage
