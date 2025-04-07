@@ -7,6 +7,6 @@ export const DURATION_OPTIONS = [
     '15 mins',
     '30 mins',
     '1 hour',
-    'Unkown'
+    'Unknown'
 ] as const
 export type DurationOption = typeof DURATION_OPTIONS[number]
