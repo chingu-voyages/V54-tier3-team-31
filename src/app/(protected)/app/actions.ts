@@ -141,3 +141,58 @@ export async function generateGoalsFromInput(userInput: string): Promise<GeminiR
     throw new Error("Failed to generate goals from input.");
   }
 }
+
+// Define schema for simplified task response
+const simplifiedTaskSchema: ArraySchema = {
+    type: SchemaType.ARRAY,
+    description: "A list of simplified versions of the task.",
+    items: {
+        type: SchemaType.OBJECT,
+        description: "A simplified version of the task.",
+        properties: {
+            title: { type: SchemaType.STRING, description: "Simplified version of the task title." },
+            description: { type: SchemaType.STRING, nullable: true, description: "Optional description of the simplified task." },
+            difficulty: { type: SchemaType.STRING, description: "Difficulty level of the simplified task (Simpler, Medium, Hard)." }
+        },
+        required: ["title", "difficulty"]
+    }
+};
+
+// Create a new model instance for task simplification
+const taskSimplificationModel = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    systemInstruction: "You are an AI assistant designed to help users break down complex tasks into simpler, more manageable steps.\n\nYour task is to analyze the user's task and generate exactly one simplified version of it.\n\nThe output MUST be a JSON array containing exactly one object with the following structure:\n\n1. title: A simpler version of the task\n2. description: An optional description explaining how this version is simpler\n3. difficulty: The difficulty level (Simpler, Medium, Hard)\n\nGenerate a version that is genuinely simpler and more manageable than the original task.",
+});
+
+// Explicitly type generationConfig for task simplification
+const taskSimplificationConfig: GenerationConfig = {
+    temperature: 0.7,
+    topP: 0.95,
+    topK: 40,
+    maxOutputTokens: 1024,
+    responseMimeType: "application/json",
+    responseSchema: simplifiedTaskSchema,
+};
+
+export async function simplifyTask(taskTitle: string): Promise<{ title: string; description?: string; difficulty: string }> {
+    try {
+        const chatSession = taskSimplificationModel.startChat({
+            generationConfig: taskSimplificationConfig,
+            history: [],
+        });
+
+        const result = await chatSession.sendMessage(`Simplify this task: ${taskTitle}`);
+        const response = result.response;
+        const responseText = response.text();
+        const parsedResponse = JSON.parse(responseText);
+        
+        if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+            return parsedResponse[0];
+        }
+        
+        throw new Error("Invalid response format from Gemini API");
+    } catch (error) {
+        console.error("Error simplifying task:", error);
+        throw new Error("Failed to simplify task.");
+    }
+}

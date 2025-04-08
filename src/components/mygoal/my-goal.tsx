@@ -37,7 +37,6 @@ export default function MyGoalPage() {
     try {
       setIsLoading(true);
       const goalsWithTasks = await generateGoalsFromInput(data.goal)
-      console.log("goals with tasks", goalsWithTasks)
       
       // Get existing goals to determine the next available ID
       const existingGoals = await getAllGoalsFromLocal();
@@ -78,7 +77,7 @@ export default function MyGoalPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-black px-4 sm:px-6 md:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 sm:px-6 md:px-8">
       <div className="w-full max-w-3xl">
         <div className="flex flex-col items-center text-center">
           <div className="mb-6 flex items-center justify-center">

@@ -9,7 +9,7 @@ export default function Home() {
   const [showMyGoal, setShowMyGoal] = useState(false);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen text-white p-4">
       {!showMyGoal ? (
         <div className="flex flex-col items-center space-y-6 w-full text-center max-w-3xl">
           {/* Logo */}

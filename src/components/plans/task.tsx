@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { Star, Trash, WandSparkles } from 'lucide-react'
+import { Star, Trash, WandSparkles, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
     DropdownMenu,
@@ -19,6 +19,8 @@ import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 import { toggleTaskFocus } from "@/lib/localforage"
 import { Checkbox } from '../ui/checkbox'
+import { simplifyTask } from '@/app/(protected)/app/actions'
+import { toast } from 'sonner'
 
 interface TaskProps {
     id: number
@@ -56,6 +58,7 @@ const Task: React.FC<TaskProps> = ({
     const [isEditing, setIsEditing] = useState(false)
     const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
     const [isChecked, setIsChecked] = useState(completed)
+    const [isSimplifying, setIsSimplifying] = useState(false)
     const formRef = useRef<HTMLDivElement>(null)
     
     // Update local state when prop changes
@@ -178,6 +181,32 @@ const Task: React.FC<TaskProps> = ({
     const handleCheckboxChange = async (checked: boolean) => {
         setIsChecked(checked)
         onTaskComplete?.(id, checked, checked ? new Date() : undefined)
+    }
+
+    // Handle task simplification
+    const handleSimplifyTask = async (e: React.MouseEvent) => {
+        e.stopPropagation() // Prevent triggering the edit mode
+        setIsSimplifying(true)
+        try {
+            const simplifiedTask = await simplifyTask(title)
+            
+            // Update the task with the simplified version
+            const updatedValues = {
+                title: simplifiedTask.title,
+                frequency: frequency || 'Once',
+                duration: duration || '5 mins',
+                difficulty: simplifiedTask.difficulty,
+                description: simplifiedTask.description || null
+            }
+            
+            await handleTaskEdit(id, updatedValues)
+            toast.success('Task simplified successfully!')
+        } catch (error) {
+            console.error("Error simplifying task:", error)
+            toast.error('Failed to simplify task. Please try again.')
+        } finally {
+            setIsSimplifying(false)
+        }
     }
 
     return (
@@ -400,9 +429,15 @@ const Task: React.FC<TaskProps> = ({
                             <Button
                                 variant="ghost"
                                 className="flex items-center gap-1 whitespace-nowrap"
+                                onClick={handleSimplifyTask}
+                                disabled={isSimplifying}
                             >
                                 <div className="w-4 h-4 text-primary">
-                                    <WandSparkles size={16} />
+                                    {isSimplifying ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <WandSparkles size={16} />
+                                    )}
                                 </div>
                                 <div>Simpler</div>
                             </Button>

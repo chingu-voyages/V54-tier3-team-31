@@ -47,7 +47,6 @@ const Focus: React.FC = () => {
         const loadTasks = async () => {
             await cleanupOldFocusTasks()
             const tasksInFocus = await getTasksInFocus()
-            console.log("The tasks in Focus", tasksInFocus);
             setTasks(tasksInFocus)
         }
         loadTasks()
