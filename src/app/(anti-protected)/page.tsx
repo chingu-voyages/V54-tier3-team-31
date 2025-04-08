@@ -11,7 +11,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
       {!showMyGoal ? (
-        <div className="flex flex-col items-center space-y-6 max-w-md 2xl:max-w-xl w-full text-center">
+        <div className="flex flex-col items-center space-y-6 w-full text-center max-w-3xl">
           {/* Logo */}
           <div className="mb-4">
             <h1 className="text-4xl font-bold flex items-center">

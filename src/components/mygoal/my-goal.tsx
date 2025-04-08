@@ -5,9 +5,12 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import TextareaAutosize from 'react-textarea-autosize'; // Import the autosize component
+import { generateGoalsFromInput } from "@/app/(protected)/app/actions";
+import { saveGoalsToLocal } from "@/lib/localforage";
+import { useRouter } from "next/navigation";
 
 const goalSchema = z.object({
   goal: z.string().min(1, "Please enter your goal."),
@@ -16,6 +19,8 @@ const goalSchema = z.object({
 type GoalFormValues = z.infer<typeof goalSchema>;
 
 export default function MyGoalPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCustomizing, setIsCustomizing] = useState(false);
   const {
     control,
     handleSubmit,
@@ -26,9 +31,20 @@ export default function MyGoalPage() {
       goal: "As a remote engineer, I hope to build habits for exercising to get healthier and sleeping early",
     },
   });
+  const router = useRouter();
 
-  const onSubmit = (data: GoalFormValues) => {
-    console.log("Submitted goal:", data.goal);
+  const onSubmit = async (data: GoalFormValues) => {
+    try {
+      setIsLoading(true);
+      const goalsWithTasks = await generateGoalsFromInput(data.goal)
+      console.log("goals with tasks", goalsWithTasks)
+      saveGoalsToLocal(goalsWithTasks);
+      router.push("plans");
+    } catch (error) {
+      console.error("Error generating goals:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +86,7 @@ export default function MyGoalPage() {
             {errors.goal && <p className="text-red-500 text-sm">{errors.goal.message}</p>}
 
             <div className="flex flex-col items-center space-y-4">
-              <Link href="/plans" passHref>
+              <Link href="/plans" passHref onClick={() => setIsCustomizing(true)}>
                 <button
                   type="button"
                   className="flex items-center space-x-2 text-sm font-medium text-gray-400 hover:text-white"
@@ -101,8 +117,9 @@ export default function MyGoalPage() {
               <Button
                 type="submit"
                 className="mt-6 h-14 w-full bg-white text-black text-base font-medium hover:bg-gray-200"
+                disabled={isLoading || isCustomizing}
               >
-                Create Tasks
+                {isLoading ? "Creating Tasks..." : "Create Tasks"}
               </Button>
             </div>
           </form>

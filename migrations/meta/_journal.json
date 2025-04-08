@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1742926708922,
-      "tag": "0000_even_valkyrie",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1743200514483,
-      "tag": "0001_closed_loa",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1743267618413,
-      "tag": "0002_unique_sabretooth",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1743279255861,
-      "tag": "0003_harsh_mandarin",
+      "when": 1744138029238,
+      "tag": "0000_ancient_skin",
       "breakpoints": true
     }
   ]

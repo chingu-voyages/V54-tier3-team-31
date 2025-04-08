@@ -5,7 +5,7 @@ import {
     saveGoalsToLocal,
     removeGoalFromLocal,
 } from '@/lib/localforage'
-import { Task as TaskSchema } from '@/lib/schema'
+import { Task as TaskSchema } from '@/lib/db/schema'
 import { nanoid } from 'nanoid'
 import {
     GoalAction,
