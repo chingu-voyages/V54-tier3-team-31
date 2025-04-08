@@ -8,7 +8,7 @@ import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
 import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus, cleanupOldFocusTasks } from '@/lib/localforage'
 import type { TaskFormValues } from '@/lib/types/types'
-import type { Task } from '@/lib/schema'
+import type { Task } from '@/lib/db/schema'
 import type { ReactNode } from 'react'
 
 // Mock all required components and hooks
@@ -169,7 +169,24 @@ describe('Focus Component', () => {
             description: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            userId: 'test-user'
+            userId: 'test-user',
+            tasks: [
+                {
+                    id: 1,
+                    title: 'Test Task 1',
+                    frequency: 'Daily',
+                    duration: '10 mins',
+                    completed: false,
+                    isInFocus: true,
+                    completedAt: null,
+                    difficulty: null,
+                    description: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    userId: 'test-user',
+                    goalId: 1
+                }
+            ]
         }
     ]
 

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { GoalFormSchema, TaskFormSchema } from './validations'
-import * as schema from '@/lib/schema'
+import * as schema from '@/lib/db/schema'
 
 export type TaskFormValues = z.infer<typeof TaskFormSchema>
 export type GoalFormValues = z.infer<typeof GoalFormSchema>

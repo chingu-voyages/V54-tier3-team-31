@@ -1,5 +1,5 @@
 import localforage from 'localforage'
-import * as schema from './schema'
+import * as schema from './db/schema'
 import { TaskFormValues } from './types/types'
 import { GoalWithTasks } from './types/types'
 

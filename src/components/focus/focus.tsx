@@ -5,7 +5,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useEffect, useState } from 'react'
 import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus, cleanupOldFocusTasks } from '@/lib/localforage'
-import type { Task } from '@/lib/schema'
+import type { Task } from '@/lib/db/schema'
 import type { TaskFormValues } from '@/lib/types/types'
 import FocusTask from './focus-task'
 import { useForm } from 'react-hook-form'
@@ -47,6 +47,7 @@ const Focus: React.FC = () => {
         const loadTasks = async () => {
             await cleanupOldFocusTasks()
             const tasksInFocus = await getTasksInFocus()
+            console.log("The tasks in Focus", tasksInFocus);
             setTasks(tasksInFocus)
         }
         loadTasks()
@@ -268,6 +269,11 @@ const Focus: React.FC = () => {
         deleteGoal(id)
     }
 
+    // Filter goals that have tasks in focus
+    const goalsWithTasksInFocus = goals.filter(goal => 
+        goal.tasks.some(task => task.isInFocus)
+    );
+
     const dropDownActions = [
         {
             name: 'Add a Task',
@@ -384,7 +390,7 @@ const Focus: React.FC = () => {
                     {/* Goals Section */}
                     <div className="mb-6">
                         <GoalsList
-                            goals={goals}
+                            goals={goalsWithTasksInFocus}
                             form={form}
                             onDeleteGoal={handleDeleteGoal}
                             onDeleteTask={handleDeleteTask}
