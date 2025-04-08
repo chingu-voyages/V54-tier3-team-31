@@ -3,9 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Plans from '../../../src/components/plans/plans';
-import { useTaskManagement } from '@/hooks/useTaskManagement';
 import '@testing-library/jest-dom/vitest';
 import { TaskFormValues } from '@/lib/types/types';
+import { useTaskManagement } from '@/hooks/useTaskManagement';
 
 // Mock localForage
 vi.mock('localforage', () => ({
@@ -44,6 +44,16 @@ vi.mock('../../../src/components/plans/task-form', () => ({
         </div>
     )
 }));
+
+// Fix the react-hook-form mock
+vi.mock("react-hook-form", async () => {
+  const actual = await import("react-hook-form");
+  return {
+    ...actual,
+    // Ensure FormProvider is properly exported
+    FormProvider: actual.FormProvider,
+  };
+});
 
 describe('Plans Component', () => {
     const mockPlanTasks = [
