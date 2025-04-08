@@ -285,7 +285,7 @@ const Focus: React.FC = () => {
         },
         {
             name: 'Add Plans Based on My Goal',
-            href: '/add-plans-ai',
+            href: '/',
         },
     ]
 
