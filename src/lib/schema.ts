@@ -129,7 +129,9 @@ export const tasks = pgTable('task', {
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     completed: boolean('completed').default(false), // Keep completion status on the task itself
+    completedAt: timestamp('completed_at'), // Add timestamp for when the task was completed
     description: text('description'),
+    isInFocus: boolean('is_in_focus').default(false), // New field to track if task is in focus
 })
 
 // Relations
@@ -165,3 +167,4 @@ export type Account = typeof accounts.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Goal = typeof goals.$inferSelect
 export type Task = typeof tasks.$inferSelect
+

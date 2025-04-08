@@ -1,7 +1,10 @@
 'use client'
 
-import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { Star, Trash, WandSparkles } from 'lucide-react'
+import type React from 'react'
+import { useEffect, useState, useRef, KeyboardEvent } from 'react'
+import type { UseFormReturn } from 'react-hook-form'
+import type { TaskFormValues } from '@/lib/types/types'
+import { Checkbox } from '../ui/checkbox'
 import { Button } from '../ui/button'
 import {
     DropdownMenu,
@@ -9,63 +12,69 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
+import { WandSparkles, Trash } from 'lucide-react'
 import ActionDropdown from '../ui/action-dropdown'
 import { Form } from '@/components/ui/form'
 import { FormField, FormItem, FormControl, FormMessage } from '../ui/form'
 import { Input } from '../ui/input'
-import { UseFormReturn } from 'react-hook-form'
-import { TaskFormValues } from '@/lib/types/types'
-import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
-import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
-import { toggleTaskFocus } from "@/lib/localforage"
-import { Checkbox } from '../ui/checkbox'
 
-interface TaskProps {
+interface FocusTaskProps {
     id: number
     title: string
-    frequency?: string | null
-    duration?: string | null
-    onFrequencyChange?: (newFrequency: string) => void
-    onDurationChange?: (newDuration: string) => void
-    onDeleteTaskClick: (taskId: number, goalId?: number) => void
-    onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
-    form: UseFormReturn<TaskFormValues>,
-    goalId?: number
-    isInFocus?: boolean
-    useCheckbox?: boolean
-    onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
-    completed?: boolean
+    frequency: string
+    duration: string
+    completed: boolean
+    form: UseFormReturn<TaskFormValues>
+    onToggleFocus?: (taskId: number, isInFocus: boolean) => void
+    onTaskComplete?: (
+        taskId: number,
+        completed: boolean,
+        completedAt?: Date
+    ) => void
+    onFrequencyChange?: (taskId: number, newFrequency: string) => void
+    onDurationChange?: (taskId: number, newDuration: string) => void
+    onDeleteTask?: (taskId: number) => void
+    onEditTask?: (taskId: number, values: TaskFormValues) => void
 }
 
-const Task: React.FC<TaskProps> = ({
+const FocusTask: React.FC<FocusTaskProps> = ({
     id,
     title,
-    frequency = 'Once',
-    duration = '5 mins',
+    frequency,
+    duration,
+    completed: initialCompleted,
+    onTaskComplete,
     onFrequencyChange,
     onDurationChange,
-    onDeleteTaskClick,
+    onDeleteTask,
     onEditTask,
     form,
-    goalId,
-    isInFocus: propIsInFocus = false,
-    useCheckbox = false,
-    onTaskComplete,
-    completed = false
 }) => {
+    const [isChecked, setIsChecked] = useState(initialCompleted)
     const [isEditing, setIsEditing] = useState(false)
-    const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
-    const [isChecked, setIsChecked] = useState(completed)
     const formRef = useRef<HTMLDivElement>(null)
-    
-    // Update local state when prop changes
-    useEffect(() => {
-        setLocalIsInFocus(propIsInFocus)
-        setIsChecked(completed)
-    }, [propIsInFocus, completed])
 
-    // Always call the hook, but only use its result if there's a goalId
-    const taskGoalContext = useTaskGoalContext()
+    useEffect(() => {
+        setIsChecked(initialCompleted)
+    }, [initialCompleted])
+
+    const handleCheckboxChange = async (checked: boolean) => {
+        setIsChecked(checked)
+        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
+    }
+
+    const handleFrequencyChange = (newFrequency: string) => {
+        onFrequencyChange?.(id, newFrequency)
+    }
+
+    const handleDurationChange = (newDuration: string) => {
+        onDurationChange?.(id, newDuration)
+    }
+
+    const handleDeleteTask = () => {
+        onDeleteTask?.(id)
+    }
 
     // Handler for document clicks - checks if click is outside the form
     const handleDocumentClick = (e: MouseEvent) => {
@@ -99,89 +108,15 @@ const Task: React.FC<TaskProps> = ({
         }
     }
 
-    // Unified handler for task editing
+    // Handler for task editing
     const handleTaskEdit = async (taskId: number, values: TaskFormValues) => {
-        if (goalId) {
-            // If this is a goal task, use the context method first
-            await taskGoalContext.updateTaskInGoal(taskId, goalId, values)
+        if (onEditTask) {
+            onEditTask(taskId, values)
         }
-        
-        // Also call the prop method for backward compatibility
-        // This ensures synchronization at both context and parent component levels
-        onEditTask(taskId, values, goalId)
-        
-        // Hide the editing form
-        setIsEditing(false)
-    }
-
-    // Handle frequency change in non-editing mode
-    const handleFrequencyChange = async (newFrequency: string) => {
-        if (onFrequencyChange) {
-            onFrequencyChange(newFrequency)
-        }
-        
-        const updatedValues = {
-            title,
-            frequency: newFrequency,
-            duration: duration || '5 mins',
-        }
-        
-        await handleTaskEdit(id, updatedValues)
-    }
-
-    // Handle duration change in non-editing mode
-    const handleDurationChange = async (newDuration: string) => {
-        if (onDurationChange) {
-            onDurationChange(newDuration)
-        }
-        
-        const updatedValues = {
-            title,
-            frequency: frequency || 'Once',
-            duration: newDuration,
-        }
-        
-        await handleTaskEdit(id, updatedValues)
-    }
-
-    // Handle task deletion with proper context sync
-    const handleDeleteTask = () => {
-        if (goalId) {
-            // If it's a goal task, use the context method first if available
-            if (taskGoalContext.removeTaskInGoal) {
-                taskGoalContext.removeTaskInGoal(goalId, id);
-            } else {
-                // Fallback to prop method if context method not available
-                onDeleteTaskClick(id, goalId);
-            }
-        } else {
-            // Regular task deletion (not in a goal)
-            onDeleteTaskClick(id);
-        }
-    }
-
-    // Handle star button click
-    const handleStarClick = async (e: React.MouseEvent) => {
-        e.stopPropagation() // Prevent triggering the edit mode
-        try {
-            // Update local state immediately for instant feedback
-            setLocalIsInFocus(!localIsInFocus)
-            await toggleTaskFocus(id, !localIsInFocus)
-        } catch (error) {
-            // Revert local state if there's an error
-            setLocalIsInFocus(localIsInFocus)
-            console.error("Error toggling task focus:", error)
-        }
-    }
-
-    // Handle checkbox change
-    const handleCheckboxChange = async (checked: boolean) => {
-        setIsChecked(checked)
-        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
     }
 
     return (
-        <div className="w-full border-b border-border py-3">
+        <div className="mb-4">
             {isEditing ? (
                 <div ref={formRef}>
                     <Form {...form}>
@@ -200,19 +135,10 @@ const Task: React.FC<TaskProps> = ({
                                         <FormControl>
                                             <div>
                                                 <div className="flex w-full items-center gap-2 text-base text-foreground font-medium">
-                                                    {useCheckbox ? (
-                                                        <Checkbox 
-                                                            checked={isChecked}
-                                                            onCheckedChange={handleCheckboxChange}
-                                                            className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
-                                                        />
-                                                    ) : (
-                                                        <Star
-                                                            strokeWidth={1.5}
-                                                            className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
-                                                            onClick={handleStarClick}
-                                                        />
-                                                    )}
+                                                    <Checkbox checked={isChecked}
+                                                        onCheckedChange={handleCheckboxChange}
+                                                        className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                                                    />
                                                     <Input
                                                         placeholder="Your Task"
                                                         {...field}
@@ -310,7 +236,7 @@ const Task: React.FC<TaskProps> = ({
                                                             <Trash className="mr-2 h-4 w-4 text-red-400" />
                                                             Cancel
                                                         </DropdownMenuItem>
-                                                        {/* Consider adding a Save button here or rely on Enter */}
+                                                        {/* Consider addinfg a Save button here or rely on Enter */}
                                                     </ActionDropdown>
                                                 </div>
                                             </div>
@@ -327,24 +253,18 @@ const Task: React.FC<TaskProps> = ({
                 </div>
             ) : (
                 <>
-                    <div
-                        className="flex w-full items-center gap-2 text-base text-foreground font-medium cursor-pointer"
-                        onClick={() => toggleEditing(true)}
-                    >
-                        {useCheckbox ? (
-                            <Checkbox 
-                                checked={isChecked}
-                                onCheckedChange={handleCheckboxChange}
-                                className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
-                            />
-                        ) : (
-                            <Star 
-                                strokeWidth={1.5} 
-                                className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
-                                onClick={handleStarClick}
-                            />
-                        )}
-                        <div className={`self-stretch my-auto ${isChecked ? 'line-through text-zinc-500' : ''}`}>{title}</div>
+                    <div className="flex items-center gap-3">
+                        <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={handleCheckboxChange}
+                            className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                        />
+                        <span
+                            className={`flex-1 text-zinc-100 ${isChecked ? 'line-through text-zinc-500' : ''} cursor-pointer`}
+                            onClick={() => toggleEditing(true)}
+                        >
+                            {title}
+                        </span>
                     </div>
                     <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
                         <div className="self-stretch flex items-center gap-4 my-auto">
@@ -423,4 +343,4 @@ const Task: React.FC<TaskProps> = ({
     )
 }
 
-export default Task
+export default FocusTask
