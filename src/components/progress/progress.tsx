@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import CompletionCard from '@/components/progress/completion-card'
@@ -34,6 +34,7 @@ const Progress: React.FC = () => {
     interface Habit {
         id: string
         title: string
+        count: number
         completions: {
             id: number
             name: string
@@ -43,6 +44,9 @@ const Progress: React.FC = () => {
     }
 
     const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
+    const [habits, setHabits] = useState<Habit[]>([])
+    const [loading, setLoading] = useState(true)
+
     const [activeTab, setActiveTab] = useState<'weekly' | 'monthly'>('weekly')
     // Heatmap: State for the current year, month, and week
     const [year, setYear] = useState(currentYear)
@@ -140,6 +144,23 @@ const Progress: React.FC = () => {
         setSelectedHabit(habit)
     }
 
+    // Fetch completed habit data from the database
+    useEffect(() => {
+        const fetchHabits = async () => {
+            try {
+                const res = await fetch('/api/progress')
+                if (!res.ok) throw new Error('Failed to fetch')
+                const data = await res.json()
+                setHabits(data)
+            } catch (err) {
+                console.error('Error loading progress data:', err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchHabits()
+    }, [])
+
     if (selectedHabit) {
         return (
             <HabitCompletions
@@ -182,9 +203,6 @@ const Progress: React.FC = () => {
                         </TabsTrigger>
                     </TabsList>
                     {/* Heatmap for each tab */}
-
-                    {/* Monthly Tab */}
-
                     <div className="flex flex-col items-center justify-center neutral-700 rounded-[6px] border">
                         <div className="flex items-center justify-center mb-2.5 mt-6">
                             <Button
@@ -198,6 +216,7 @@ const Progress: React.FC = () => {
                             <div className="mx-4 flex flex-col justify-center items-center">
                                 <div className="w-[200px] px-1">
                                     <Tooltip id="heatmap-tooltip" />
+                                    {/* Weekly heatmap */}
                                     <TabsContent value="weekly">
                                         <CalendarHeatmap
                                             startDate={weekStartDate}
@@ -254,6 +273,7 @@ const Progress: React.FC = () => {
                                             }}
                                         />
                                     </TabsContent>
+                                    {/* Monthly heatmap */}
                                     <TabsContent value="monthly">
                                         <CalendarHeatmap
                                             startDate={startDate}
@@ -352,6 +372,7 @@ const Progress: React.FC = () => {
                                 {year}
                             </p>
                         </div>
+                        {/* Legend for heatmap */}
                         <div className="flex gap-2 justify-center items-center bg-neutral-800 px-4 py-2.5 rounded-full text-xs text-neutral-400 mt-2.5 mb-6">
                             <p>Low</p>
                             <div className="w-[18px] h-[18px] bg-[#f7fee7] rounded-xs"></div>
@@ -367,8 +388,10 @@ const Progress: React.FC = () => {
             {/* Completion List */}
             <div className="items-center mb-4 px-4">
                 <h2 className="text-xl font-semibold">Completion List</h2>
-                {placeholderData.length > 0 ? (
-                    placeholderData.map((habit) => (
+                {loading ? (
+                    <p>Loading...</p>
+                ) : habits.length > 0 ? (
+                    habits.map((habit) => (
                         <CompletionCard
                             key={habit.id}
                             habitId={habit.id}
