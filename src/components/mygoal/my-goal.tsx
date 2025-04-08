@@ -9,7 +9,7 @@ import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import TextareaAutosize from 'react-textarea-autosize'; // Import the autosize component
 import { generateGoalsFromInput } from "@/app/(protected)/app/actions";
-import { saveGoalsToLocal } from "@/lib/localforage";
+import { saveGoalsToLocal, getAllGoalsFromLocal } from "@/lib/localforage";
 import { useRouter } from "next/navigation";
 
 const goalSchema = z.object({
@@ -38,7 +38,15 @@ export default function MyGoalPage() {
       setIsLoading(true);
       const goalsWithTasks = await generateGoalsFromInput(data.goal)
       console.log("goals with tasks", goalsWithTasks)
-      saveGoalsToLocal(goalsWithTasks);
+      
+      // Get existing goals
+      const existingGoals = await getAllGoalsFromLocal();
+      
+      // Combine existing goals with new goals
+      const combinedGoals = [...existingGoals, ...goalsWithTasks];
+      
+      // Save the combined goals
+      await saveGoalsToLocal(combinedGoals);
       router.push("plans");
     } catch (error) {
       console.error("Error generating goals:", error);
