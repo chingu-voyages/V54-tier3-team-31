@@ -39,11 +39,33 @@ export default function MyGoalPage() {
       const goalsWithTasks = await generateGoalsFromInput(data.goal)
       console.log("goals with tasks", goalsWithTasks)
       
-      // Get existing goals
+      // Get existing goals to determine the next available ID
       const existingGoals = await getAllGoalsFromLocal();
       
+      // Find the highest existing goal ID
+      const maxExistingGoalId = existingGoals.reduce((max, goal) => 
+        Math.max(max, goal.id), 0);
+      
+      // Find the highest existing task ID
+      const maxExistingTaskId = existingGoals.reduce((max, goal) => 
+        Math.max(max, ...goal.tasks.map(task => task.id)), 0);
+      
+      // Generate new unique IDs for goals and tasks
+      const goalsWithUniqueIds = goalsWithTasks.map((goal, goalIndex) => {
+        const newGoalId = maxExistingGoalId + goalIndex + 1;
+        return {
+          ...goal,
+          id: newGoalId,
+          tasks: goal.tasks.map((task, taskIndex) => ({
+            ...task,
+            id: maxExistingTaskId + (goalIndex * goal.tasks.length) + taskIndex + 1,
+            goalId: newGoalId
+          }))
+        };
+      });
+      
       // Combine existing goals with new goals
-      const combinedGoals = [...existingGoals, ...goalsWithTasks];
+      const combinedGoals = [...existingGoals, ...goalsWithUniqueIds];
       
       // Save the combined goals
       await saveGoalsToLocal(combinedGoals);

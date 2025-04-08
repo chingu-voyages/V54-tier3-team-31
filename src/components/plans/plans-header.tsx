@@ -41,7 +41,7 @@ export const PlansHeader: React.FC<PlansHeaderProps> = ({
         },
         {
             name: 'Add Plans Based on My Goal',
-            href: '/add-plans-ai',
+            href: '/my-goal',
         },
     ]
 
