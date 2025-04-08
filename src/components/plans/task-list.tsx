@@ -45,6 +45,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 <Task
                     key={nanoid()}
                     {...planTask}
+                    completed={planTask.completed === null ? undefined : planTask.completed}
                     onDeleteTaskClick={onDeleteTask}
                     onEditTask={onEditTask}
                     form={form}
