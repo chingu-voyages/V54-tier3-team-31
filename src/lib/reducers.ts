@@ -39,7 +39,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
                 completedAt: null, // Add the completedAt property
-                isInFocus: action.taskId ? true : false,
+                isInFocus: false, // Default to false for new tasks
             }
             
             // If this task belongs to a goal, don't add it to the main tasks array
@@ -100,9 +100,11 @@ export function goalReducer(state: GoalState, action: GoalAction) {
         }
 
         case 'added': {
+            // Generate a unique number ID using crypto.randomUUID()
+            const goalId = parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16);
             const newGoal: GoalWithTasks = {
                 ...action.values,
-                id: Date.now(),
+                id: goalId,
                 description: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -110,11 +112,11 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                 endDate: new Date(),
                 frequency: null,
                 userId: nanoid(),
-                bestTimeTitle: action.values.bestTimeTitle ?? null, // Ensure null is used
+                bestTimeTitle: action.values.bestTimeTitle ?? null,
                 bestTimeDescription: action.values.bestTimeDescription ?? null,
                 tasks: [
                     {
-                        id: Date.now(),
+                        id: parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16),
                         title: 'Your Goal Here',
                         difficulty: null,
                         description: null,
@@ -123,12 +125,12 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                         frequency: 'Once',
                         duration: '5 mins',
                         userId: nanoid(),
-                        goalId: null,
+                        goalId: goalId,
                         completed: false,
                         completedAt: null,
                         isInFocus: false
                     }
-                ], // Add an empty tasks array to conform to GoalWithTasks
+                ],
             }
             const nextGoal = [...state, newGoal]
             saveGoalsToLocal(nextGoal)

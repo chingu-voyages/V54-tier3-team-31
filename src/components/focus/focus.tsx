@@ -270,7 +270,7 @@ const Focus: React.FC = () => {
 
     // Filter goals that have tasks in focus
     const goalsWithTasksInFocus = goals.filter(goal => 
-        goal.tasks.some(task => task.isInFocus)
+        goal.tasks.some(task => task.isInFocus && !task.goalId)
     );
 
     const dropDownActions = [
