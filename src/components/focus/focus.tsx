@@ -4,7 +4,12 @@ import type React from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useEffect, useState } from 'react'
-import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus, cleanupOldFocusTasks } from '@/lib/localforage'
+import {
+    getTasksInFocus,
+    updateTaskCompletion,
+    toggleTaskFocus,
+    cleanupOldFocusTasks,
+} from '@/lib/localforage'
 import type { Task } from '@/lib/db/schema'
 import type { TaskFormValues } from '@/lib/types/types'
 import FocusTask from './focus-task'
@@ -23,6 +28,7 @@ import { TaskGoalProvider } from '@/hooks/useTaskGoalContext'
 import GoalsList from '../plans/goals-list'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { TaskFormSchema } from '@/lib/types/validations'
+import { nanoid } from 'nanoid'
 
 type TaskWithMeta = Task & {
     isInFocus: boolean | null
@@ -32,8 +38,10 @@ type TaskWithMeta = Task & {
 const Focus: React.FC = () => {
     const [tasks, setTasks] = useState<TaskWithMeta[]>([])
     const [isAddingPlan, setIsAddingPlan] = useState(false)
-    const { addTask, editTask, deleteTask } = useTaskManagement()
-    const { goals, addGoal, editGoal, deleteGoal, editBestTime } = useGoalManagement()
+    const { planTasks, addTask, editTask, deleteTask } = useTaskManagement()
+    console.log("currently the plantasks", planTasks)
+    const { goals, addGoal, editGoal, deleteGoal, editBestTime } =
+        useGoalManagement()
     const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
@@ -55,53 +63,44 @@ const Focus: React.FC = () => {
     const handleTaskComplete = async (taskId: number, completed: boolean) => {
         try {
             // Find the task to get its goalId
-            const task = tasks.find(t => t.id === taskId)
+            const task = tasks.find((t) => t.id === taskId)
             if (!task) return
 
             // Update local state first for immediate feedback
-            setTasks(prev => 
-                prev.map(t => 
-                    t.id === taskId 
-                        ? { ...t, completed, completedAt: completed ? new Date() : null }
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId
+                        ? {
+                              ...t,
+                              completed,
+                              completedAt: completed ? new Date() : null,
+                          }
                         : t
                 )
             )
 
             // Persist to storage
-            await updateTaskCompletion(taskId, completed, task.goalId || undefined)
+            await updateTaskCompletion(
+                taskId,
+                completed,
+                task.goalId || undefined
+            )
         } catch (error) {
             console.error('Error updating task completion:', error)
             // Revert local state on error
-            setTasks(prev => 
-                prev.map(t => 
-                    t.id === taskId 
-                        ? { ...t, completed: !completed, completedAt: completed ? null : new Date() }
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId
+                        ? {
+                              ...t,
+                              completed: !completed,
+                              completedAt: completed ? null : new Date(),
+                          }
                         : t
                 )
             )
         }
     }
-
-    // Group tasks by goal name
-    const groupedTasks = tasks.reduce((acc, task) => {
-        if (!task.goalId) {
-            // This is a Plan Task
-            if (!acc['Plans']) {
-                acc['Plans'] = []
-            }
-            acc['Plans'].push(task)
-        } else {
-            // This is a Goal Task
-            const goal = goals.find(g => g.id === task.goalId)
-            if (goal) {
-                if (!acc[goal.name]) {
-                    acc[goal.name] = []
-                }
-                acc[goal.name].push(task)
-            }
-        }
-        return acc
-    }, {} as Record<string, TaskWithMeta[]>)
 
     const handleAddTask = async (values: TaskFormValues) => {
         try {
@@ -128,17 +127,18 @@ const Focus: React.FC = () => {
     }
 
     // Handler for frequency change
-    const handleFrequencyChange = async (taskId: number, newFrequency: string) => {
+    const handleFrequencyChange = async (
+        taskId: number,
+        newFrequency: string
+    ) => {
         // Find the task to get its goalId
-        const task = tasks.find(t => t.id === taskId)
+        const task = tasks.find((t) => t.id === taskId)
         if (!task) return
 
         // Update local state first for immediate feedback
-        setTasks(prev => 
-            prev.map(t => 
-                t.id === taskId 
-                    ? { ...t, frequency: newFrequency }
-                    : t
+        setTasks((prev) =>
+            prev.map((t) =>
+                t.id === taskId ? { ...t, frequency: newFrequency } : t
             )
         )
 
@@ -146,19 +146,19 @@ const Focus: React.FC = () => {
             // Persist to storage
             await editTask(
                 taskId,
-                { 
+                {
                     title: task.title,
                     frequency: newFrequency,
-                    duration: task.duration || '5 mins'
+                    duration: task.duration || '5 mins',
                 },
                 task.goalId || undefined
             )
         } catch (error) {
             console.error('Error updating task frequency:', error)
             // Revert local state on error
-            setTasks(prev => 
-                prev.map(t => 
-                    t.id === taskId 
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId
                         ? { ...t, frequency: task.frequency || 'Once' }
                         : t
                 )
@@ -167,17 +167,18 @@ const Focus: React.FC = () => {
     }
 
     // Handler for duration change
-    const handleDurationChange = async (taskId: number, newDuration: string) => {
+    const handleDurationChange = async (
+        taskId: number,
+        newDuration: string
+    ) => {
         // Find the task to get its goalId
-        const task = tasks.find(t => t.id === taskId)
+        const task = tasks.find((t) => t.id === taskId)
         if (!task) return
 
         // Update local state first for immediate feedback
-        setTasks(prev => 
-            prev.map(t => 
-                t.id === taskId 
-                    ? { ...t, duration: newDuration }
-                    : t
+        setTasks((prev) =>
+            prev.map((t) =>
+                t.id === taskId ? { ...t, duration: newDuration } : t
             )
         )
 
@@ -185,19 +186,19 @@ const Focus: React.FC = () => {
             // Persist to storage
             await editTask(
                 taskId,
-                { 
+                {
                     title: task.title,
                     frequency: task.frequency || 'Once',
-                    duration: newDuration
+                    duration: newDuration,
                 },
                 task.goalId || undefined
             )
         } catch (error) {
             console.error('Error updating task duration:', error)
             // Revert local state on error
-            setTasks(prev => 
-                prev.map(t => 
-                    t.id === taskId 
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId
                         ? { ...t, duration: task.duration || '5 mins' }
                         : t
                 )
@@ -207,52 +208,39 @@ const Focus: React.FC = () => {
 
     // Handler for task deletion
     const handleDeleteTask = async (taskId: number) => {
-        const task = tasks.find(t => t.id === taskId)
+        const task = tasks.find((t) => t.id === taskId)
         if (!task) return
 
         try {
             // Update local state first
-            setTasks(prev => prev.filter(t => t.id !== taskId))
+            setTasks((prev) => prev.filter((t) => t.id !== taskId))
 
             // Persist to storage
-            await deleteTask(
-                taskId,
-                task.goalId || undefined
-            )
+            await deleteTask(taskId, task.goalId || undefined)
         } catch (error) {
             console.error('Error deleting task:', error)
             // Revert local state on error
-            setTasks(prev => [...prev, task])
+            setTasks((prev) => [...prev, task])
         }
     }
 
     // Handler for task editing
     const handleEditTask = async (taskId: number, values: TaskFormValues) => {
-        const task = tasks.find(t => t.id === taskId)
+        const task = tasks.find((t) => t.id === taskId)
         if (!task) return
 
         try {
             // Update local state first
-            setTasks(prev => prev.map(t => 
-                t.id === taskId 
-                    ? { ...t, ...values }
-                    : t
-            ))
+            setTasks((prev) =>
+                prev.map((t) => (t.id === taskId ? { ...t, ...values } : t))
+            )
 
             // Persist to storage
-            await editTask(
-                taskId,
-                values,
-                task.goalId || undefined
-            )
+            await editTask(taskId, values, task.goalId || undefined)
         } catch (error) {
             console.error('Error editing task:', error)
             // Revert local state on error
-            setTasks(prev => prev.map(t => 
-                t.id === taskId 
-                    ? task
-                    : t
-            ))
+            setTasks((prev) => prev.map((t) => (t.id === taskId ? task : t)))
         }
     }
 
@@ -260,18 +248,16 @@ const Focus: React.FC = () => {
         editGoal(id, newName)
     }
 
-    const handleEditBestTime = (id: number, updates: { bestTimeTitle?: string, bestTimeDescription?: string }) => {
+    const handleEditBestTime = (
+        id: number,
+        updates: { bestTimeTitle?: string; bestTimeDescription?: string }
+    ) => {
         editBestTime(id, updates)
     }
 
     const handleDeleteGoal = (id: number) => {
         deleteGoal(id)
     }
-
-    // Filter goals that have tasks in focus
-    const goalsWithTasksInFocus = goals.filter(goal => 
-        goal.tasks.some(task => task.isInFocus && !task.goalId)
-    );
 
     const dropDownActions = [
         {
@@ -288,6 +274,31 @@ const Focus: React.FC = () => {
         },
     ]
 
+    // Filter goals that have tasks in focus
+    const goalsWithTasksInFocus = goals.map((goal) => ({
+        ...goal,
+        tasks: goal.tasks.filter((task) => task.isInFocus && task.goalId),
+    }))
+
+    const focusTasks = planTasks.map((task) =>
+        task.isInFocus ? (
+            <FocusTask
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                frequency={task.frequency || 'Once'}
+                duration={task.duration || '5 mins'}
+                completed={task.completed || false}
+                form={form}
+                onTaskComplete={handleTaskComplete}
+                onFrequencyChange={handleFrequencyChange}
+                onDurationChange={handleDurationChange}
+                onDeleteTask={handleDeleteTask}
+                onEditTask={handleEditTask}
+            />
+        ) : null
+    )
+
     return (
         <TaskGoalProvider>
             <div className="min-h-screen flex flex-col text-white">
@@ -301,7 +312,11 @@ const Focus: React.FC = () => {
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 p-0 bg-white rounded-full">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-10 w-10 text-zinc-400 p-0 bg-white rounded-full"
+                                >
                                     <span className="text-2xl">≡</span>
                                 </Button>
                             </DropdownMenuTrigger>
@@ -327,13 +342,13 @@ const Focus: React.FC = () => {
                                 onCancel={() => setIsAddingPlan(false)}
                             />
                         )}
-                        
+
                         <div className="space-y-8">
-                            {Object.entries(groupedTasks).map(([goalName, tasks]) => (
-                                <div key={goalName} className="space-y-4">
+                            {!focusTasks.every((e) => e === null) && (
+                                <div key={nanoid()} className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-xl font-medium">
-                                            {goalName}
+                                            Plans
                                         </h2>
                                         <Button
                                             variant="ghost"
@@ -344,45 +359,17 @@ const Focus: React.FC = () => {
                                         </Button>
                                     </div>
                                     <div className="space-y-4">
-                                        {tasks.map((task) => (
-                                            <FocusTask
-                                                key={task.id}
-                                                id={task.id}
-                                                title={task.title}
-                                                frequency={task.frequency || 'Once'}
-                                                duration={task.duration || '5 mins'}
-                                                completed={task.completed || false}
-                                                form={form}
-                                                onTaskComplete={handleTaskComplete}
-                                                onFrequencyChange={handleFrequencyChange}
-                                                onDurationChange={handleDurationChange}
-                                                onDeleteTask={handleDeleteTask}
-                                                onEditTask={handleEditTask}
-                                            />
-                                        ))}
+                                        {focusTasks}
                                     </div>
-                                    {/* <div className="mt-4">
-                                        <button className="flex items-center text-zinc-400 text-sm">
-                                            <span className="mr-2">+</span>
-                                            add
-                                        </button>
-                                    </div> */}
-                                    {goalName !== 'Plan Tasks' && goals.find(g => g.name === goalName)?.bestTimeTitle && (
-                                        <div className="mt-4 bg-zinc-900 rounded-lg p-4">
-                                            <h3 className="text-sm font-medium mb-1">Best Time</h3>
-                                            <p className="text-sm text-zinc-400">
-                                                {goals.find(g => g.name === goalName)?.bestTimeDescription}
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
-                            ))}
-                            {tasks.length === 0 && (
-                                <p className="text-zinc-400 text-sm">
-                                    No tasks in focus. Click the star icon on tasks
-                                    to add them here.
-                                </p>
                             )}
+                            {goalsWithTasksInFocus.length === 0 &&
+                                focusTasks.every((e) => e === null) && (
+                                    <p className="text-zinc-400 text-sm">
+                                        No tasks in focus. Click the star icon
+                                        on tasks to add them here.
+                                    </p>
+                                )}
                         </div>
                     </div>
 

@@ -19,6 +19,7 @@ export type TaskAction =
           values: TaskFormValues; 
           goalId?: number;
           taskId?: number;
+          isInFocus: boolean;
       }
     | { type: 'initial'; planTasks: schema.Task[] }
     | { type: 'edited'; values: TaskFormValues; id: number; goalId?: number }

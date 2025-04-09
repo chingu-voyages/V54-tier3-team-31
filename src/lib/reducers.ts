@@ -31,7 +31,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
             const newTask: TaskSchema = {
                 ...action.values,
                 userId: nanoid(), // Keep nanoid for userId if it's suitable there
-                id: action.taskId || Date.now(), // Use the provided taskId
+                id: action.taskId || parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16), // Use the provided taskId or generate a unique numeric ID
                 difficulty: null,
                 description: null,
                 createdAt: new Date(),
@@ -39,7 +39,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
                 completedAt: null, // Add the completedAt property
-                isInFocus: false, // Default to false for new tasks
+                isInFocus: action.isInFocus, // Default to false for new tasks
             }
             
             // If this task belongs to a goal, don't add it to the main tasks array
