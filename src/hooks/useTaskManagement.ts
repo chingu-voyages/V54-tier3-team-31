@@ -6,9 +6,11 @@ import { planTaskReducer } from '@/lib/reducers'
 import { getAllPLanTasksFromLocal } from '@/lib/localforage'
 import { z } from 'zod'
 import { TaskFormSchema } from '@/lib/types/validations'
+import { usePathname } from 'next/navigation'
 
 export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
   const [planTasks, dispatch] = useReducer(planTaskReducer, [])
+  const pathname = usePathname()
 
   const refreshTasks = useCallback(async () => {
     const tasks = await getAllPLanTasksFromLocal()
@@ -23,14 +25,15 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
   }, [refreshTasks])
 
   const addTask = (values: z.infer<typeof TaskFormSchema>, goalId?: number) => {
-    // Generate the ID before dispatching
-    const newTaskId = Date.now()
-    
+
+    const newTaskId =  parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16)
+
     dispatch({
       type: 'added',
       values,
       goalId,
-      taskId: newTaskId // Pass the ID to the reducer
+      taskId: newTaskId, // Pass the ID to the reducer,
+      isInFocus: pathname === '/focus'
     })
     
     // If this task belongs to a goal and we have a callback to refresh goals, call it

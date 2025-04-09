@@ -249,13 +249,10 @@ const Goal: React.FC<GoalProps> = ({
     const [focusTasks, setFocusTasks] = useState<number[]>([])
 
     // Use the shared context for goal tasks
-    const { goals, addTaskToGoal } = useTaskGoalContext()
-
-    // Find this goal in the context to ensure we're using the most up-to-date tasks
-    const contextGoal = goals.find((g) => g.id === id)
+    const { addTaskToGoal } = useTaskGoalContext()
 
     // Use tasks from context if available, otherwise use props
-    const currentTasks = contextGoal ? contextGoal.tasks : tasks
+    const currentTasks = tasks
 
     useEffect(() => {
         const fetchFocusTasks = async () => {
