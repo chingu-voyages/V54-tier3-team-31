@@ -1,30 +1,62 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { habits } from '@/lib/schema'
-import { eq } from 'drizzle-orm'
+import { db } from '@/lib/db/db'
+import { goals, tasks } from '@/lib/db/schema'
+import { and, eq } from 'drizzle-orm'
+import { duration } from 'drizzle-orm/gel-core'
 
 export async function GET() {
-    const TEST_USER_ID = '1' // Replace with the session userid after account/auth is set up
+    const TEST_USER_ID = 'seed-user-1' // Replace with the session userid after account/auth is set up
 
-    const allHabits = await db.query.habits.findMany({
-        where: eq(habits.userId, TEST_USER_ID),
-        with: {
-            habitLogs: true,
-        },
-    })
+    try {
+        // get completed tasks for the user
+        const completedTasks = await db
+            .select({
+                taskId: tasks.id,
+                taskTitle: tasks.title,
+                frequency: tasks.frequency,
+                duration: tasks.duration,
+                goalId: tasks.goalId,
+                goalName: goals.name,
+            })
+            .from(tasks)
+            .leftJoin(goals, eq(tasks.goalId, goals.id))
+            .where(
+                and(eq(tasks.userId, TEST_USER_ID), eq(tasks.completed, true))
+            )
 
-    const result = allHabits.map((habit) => ({
-        id: habit.id.toString(),
-        title: habit.name,
-        count: habit.habitLogs.filter((log) => log.completed).length,
-        completions: habit.habitLogs
-            .filter((log) => log.completed)
-            .map((log) => ({
-                id: log.id,
-                name: habit.name,
-                frequency: habit.frequency || 'unknown',
-                duration: log.date.toISOString(),
-            })),
-    }))
-    return NextResponse.json(result)
+        // Group tasks by goal
+        const groupedByGoal = completedTasks.reduce<Record<number, any>>(
+            (acc, task) => {
+                const goalId = task.goalId ?? 0
+                if (!acc[goalId]) {
+                    acc[goalId] = {
+                        id: goalId.toString(),
+                        title: task.goalName ?? 'Ungrouped',
+                        count: 0,
+                        completions: [],
+                    }
+                }
+
+                acc[goalId].count += 1
+                acc[goalId].completions.push({
+                    id: task.taskId,
+                    name: task.taskTitle,
+                    frequency: task.frequency ?? '',
+                    duration: task.duration ?? '',
+                })
+
+                return acc
+            },
+            {}
+        )
+        const data = Object.values(groupedByGoal)
+
+        return NextResponse.json(data)
+    } catch (error) {
+        console.error('Error fetching progress:', error)
+        return NextResponse.json(
+            { error: 'Failed to fetch progress' },
+            { status: 500 }
+        )
+    }
 }

@@ -30,16 +30,18 @@ function getRandomInt(min: number, max: number) {
 }
 
 const Progress: React.FC = () => {
+    interface Completion {
+        id: number
+        name: string
+        frequency: string
+        duration: string
+    }
+
     interface Habit {
         id: string
         title: string
         count: number
-        completions: {
-            id: number
-            name: string
-            frequency: string
-            duration: string
-        }[]
+        completions: Completion[]
     }
 
     const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
@@ -145,19 +147,14 @@ const Progress: React.FC = () => {
 
     // Fetch completed habit data from the database
     useEffect(() => {
-        const fetchHabits = async () => {
-            try {
-                const res = await fetch('/api/progress')
-                if (!res.ok) throw new Error('Failed to fetch')
-                const data = await res.json()
-                setHabits(data)
-            } catch (err) {
-                console.error('Error loading progress data:', err)
-            } finally {
-                setLoading(false)
-            }
+        const fetchData = async () => {
+            const res = await fetch('/api/progress')
+            const data = await res.json()
+            setHabits(data)
+            setLoading(false)
         }
-        fetchHabits()
+
+        fetchData()
     }, [])
 
     if (selectedHabit) {
