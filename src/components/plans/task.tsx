@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react'
-import { Star, Trash, WandSparkles, Loader2 } from 'lucide-react'
+import { Star, Trash, WandSparkles, Loader2, Check, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
     DropdownMenu,
@@ -15,9 +15,12 @@ import { FormField, FormItem, FormControl, FormMessage } from '../ui/form'
 import { Input } from '../ui/input'
 import { UseFormReturn } from 'react-hook-form'
 import { TaskFormValues } from '@/lib/types/types'
-import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
+import {
+    FREQUENCY_OPTIONS,
+    DURATION_OPTIONS,
+} from '@/lib/constants/taskOptions'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
-import { toggleTaskFocus } from "@/lib/localforage"
+import { toggleTaskFocus } from '@/lib/localforage'
 import { Checkbox } from '../ui/checkbox'
 import { simplifyTask } from '@/app/(protected)/app/actions'
 import { toast } from 'sonner'
@@ -31,11 +34,15 @@ interface TaskProps {
     onDurationChange?: (newDuration: string) => void
     onDeleteTaskClick: (taskId: number, goalId?: number) => void
     onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
-    form: UseFormReturn<TaskFormValues>,
+    form: UseFormReturn<TaskFormValues>
     goalId?: number
     isInFocus?: boolean
     useCheckbox?: boolean
-    onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
+    onTaskComplete?: (
+        taskId: number,
+        completed: boolean,
+        completedAt?: Date
+    ) => void
     completed?: boolean
 }
 
@@ -53,14 +60,19 @@ const Task: React.FC<TaskProps> = ({
     isInFocus: propIsInFocus = false,
     useCheckbox = false,
     onTaskComplete,
-    completed = false
+    completed = false,
 }) => {
     const [isEditing, setIsEditing] = useState(false)
     const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
     const [isChecked, setIsChecked] = useState(completed)
     const [isSimplifying, setIsSimplifying] = useState(false)
+    const [simplifiedTaskSuggestion, setSimplifiedTaskSuggestion] = useState<
+        string | null
+    >(null)
+    const [showSimplificationConfirmation, setShowSimplificationConfirmation] =
+        useState(false)
     const formRef = useRef<HTMLDivElement>(null)
-    
+
     // Update local state when prop changes
     useEffect(() => {
         setLocalIsInFocus(propIsInFocus)
@@ -91,7 +103,7 @@ const Task: React.FC<TaskProps> = ({
     // Toggle editing state function
     const toggleEditing = (newState: boolean) => {
         setIsEditing(newState)
-        
+
         if (newState) {
             form.setValue('title', title)
             form.setValue('frequency', frequency || 'Once')
@@ -108,11 +120,11 @@ const Task: React.FC<TaskProps> = ({
             // If this is a goal task, use the context method first
             await taskGoalContext.updateTaskInGoal(taskId, goalId, values)
         }
-        
+
         // Also call the prop method for backward compatibility
         // This ensures synchronization at both context and parent component levels
         onEditTask(taskId, values, goalId)
-        
+
         // Hide the editing form
         setIsEditing(false)
     }
@@ -122,13 +134,13 @@ const Task: React.FC<TaskProps> = ({
         if (onFrequencyChange) {
             onFrequencyChange(newFrequency)
         }
-        
+
         const updatedValues = {
             title,
             frequency: newFrequency,
             duration: duration || '5 mins',
         }
-        
+
         await handleTaskEdit(id, updatedValues)
     }
 
@@ -137,13 +149,13 @@ const Task: React.FC<TaskProps> = ({
         if (onDurationChange) {
             onDurationChange(newDuration)
         }
-        
+
         const updatedValues = {
             title,
             frequency: frequency || 'Once',
             duration: newDuration,
         }
-        
+
         await handleTaskEdit(id, updatedValues)
     }
 
@@ -152,14 +164,14 @@ const Task: React.FC<TaskProps> = ({
         if (goalId) {
             // If it's a goal task, use the context method first if available
             if (taskGoalContext.removeTaskInGoal) {
-                taskGoalContext.removeTaskInGoal(goalId, id);
+                taskGoalContext.removeTaskInGoal(goalId, id)
             } else {
                 // Fallback to prop method if context method not available
-                onDeleteTaskClick(id, goalId);
+                onDeleteTaskClick(id, goalId)
             }
         } else {
             // Regular task deletion (not in a goal)
-            onDeleteTaskClick(id);
+            onDeleteTaskClick(id)
         }
     }
 
@@ -173,7 +185,7 @@ const Task: React.FC<TaskProps> = ({
         } catch (error) {
             // Revert local state if there's an error
             setLocalIsInFocus(localIsInFocus)
-            console.error("Error toggling task focus:", error)
+            console.error('Error toggling task focus:', error)
         }
     }
 
@@ -184,29 +196,51 @@ const Task: React.FC<TaskProps> = ({
     }
 
     // Handle task simplification
-    const handleSimplifyTask = async (e: React.MouseEvent) => {
-        e.stopPropagation() // Prevent triggering the edit mode
+    const handleSimplifyTask = async () => {
         setIsSimplifying(true)
         try {
             const simplifiedTask = await simplifyTask(title)
-            
-            // Update the task with the simplified version
-            const updatedValues = {
-                title: simplifiedTask.title,
-                frequency: frequency || 'Once',
-                duration: duration || '5 mins',
-                difficulty: simplifiedTask.difficulty,
-                description: simplifiedTask.description || null
-            }
-            
-            await handleTaskEdit(id, updatedValues)
-            toast.success('Task simplified successfully!')
+            setSimplifiedTaskSuggestion(simplifiedTask.title)
+            setShowSimplificationConfirmation(true)
         } catch (error) {
-            console.error("Error simplifying task:", error)
+            console.error('Error simplifying task:', error)
             toast.error('Failed to simplify task. Please try again.')
         } finally {
             setIsSimplifying(false)
         }
+    }
+
+    // Handle accepting the simplified task
+    const handleAcceptSimplifiedTask = async () => {
+        if (!simplifiedTaskSuggestion) return
+        try {
+            const updatedValues = {
+                title: simplifiedTaskSuggestion,
+                frequency: frequency || 'Once',
+                duration: duration || '5 mins',
+            }
+            await handleTaskEdit(id, updatedValues)
+            toast.success('Task updated with simplified version!')
+        } catch (error) {
+            console.error('Error applying simplified task:', error)
+            toast.error('Failed to update task. Please try again.')
+        } finally {
+            setSimplifiedTaskSuggestion(null)
+            setShowSimplificationConfirmation(false)
+        }
+    }
+
+    // Handle retrying the simplification
+    const handleRetrySimplifyTask = async () => {
+        setSimplifiedTaskSuggestion(null)
+        setShowSimplificationConfirmation(false)
+        await handleSimplifyTask()
+    }
+
+    // Handle canceling the simplification
+    const handleCancelSimplifiedTask = () => {
+        setSimplifiedTaskSuggestion(null)
+        setShowSimplificationConfirmation(false)
     }
 
     return (
@@ -217,7 +251,9 @@ const Task: React.FC<TaskProps> = ({
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault()
-                                form.handleSubmit((values) => handleTaskEdit(id, values))(e)
+                                form.handleSubmit((values) =>
+                                    handleTaskEdit(id, values)
+                                )(e)
                             }}
                             className="space-y-4 border-none border-border pb-0 pt-4"
                         >
@@ -230,16 +266,20 @@ const Task: React.FC<TaskProps> = ({
                                             <div>
                                                 <div className="flex w-full items-center gap-2 text-base text-foreground font-medium">
                                                     {useCheckbox ? (
-                                                        <Checkbox 
+                                                        <Checkbox
                                                             checked={isChecked}
-                                                            onCheckedChange={handleCheckboxChange}
+                                                            onCheckedChange={
+                                                                handleCheckboxChange
+                                                            }
                                                             className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
                                                         />
                                                     ) : (
                                                         <Star
                                                             strokeWidth={1.5}
                                                             className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
-                                                            onClick={handleStarClick}
+                                                            onClick={
+                                                                handleStarClick
+                                                            }
                                                         />
                                                     )}
                                                     <Input
@@ -248,16 +288,22 @@ const Task: React.FC<TaskProps> = ({
                                                         className="text-xl font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
                                                         variant="ghost"
                                                         autoFocus
-                                                        onKeyDown={handleKeyDown}
+                                                        onKeyDown={
+                                                            handleKeyDown
+                                                        }
                                                     />
                                                 </div>
                                                 <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
                                                     <div className="flex items-center gap-4">
                                                         {/* --- Frequency Dropdown --- */}
                                                         <FormField
-                                                            control={form.control}
+                                                            control={
+                                                                form.control
+                                                            }
                                                             name="frequency"
-                                                            render={({ field }) => (
+                                                            render={({
+                                                                field,
+                                                            }) => (
                                                                 <FormItem>
                                                                     <DropdownMenu>
                                                                         <DropdownMenuTrigger
@@ -274,14 +320,22 @@ const Task: React.FC<TaskProps> = ({
                                                                         </DropdownMenuTrigger>
                                                                         <DropdownMenuContent align="start">
                                                                             {FREQUENCY_OPTIONS.map(
-                                                                                (option) => (
+                                                                                (
+                                                                                    option
+                                                                                ) => (
                                                                                     <DropdownMenuItem
-                                                                                        key={option}
+                                                                                        key={
+                                                                                            option
+                                                                                        }
                                                                                         onSelect={() =>
-                                                                                            field.onChange(option)
+                                                                                            field.onChange(
+                                                                                                option
+                                                                                            )
                                                                                         }
                                                                                     >
-                                                                                        {option}
+                                                                                        {
+                                                                                            option
+                                                                                        }
                                                                                     </DropdownMenuItem>
                                                                                 )
                                                                             )}
@@ -293,9 +347,13 @@ const Task: React.FC<TaskProps> = ({
                                                         />
                                                         {/* --- Duration Dropdown --- */}
                                                         <FormField
-                                                            control={form.control}
+                                                            control={
+                                                                form.control
+                                                            }
                                                             name="duration"
-                                                            render={({ field }) => (
+                                                            render={({
+                                                                field,
+                                                            }) => (
                                                                 <FormItem>
                                                                     <DropdownMenu>
                                                                         <DropdownMenuTrigger
@@ -312,14 +370,22 @@ const Task: React.FC<TaskProps> = ({
                                                                         </DropdownMenuTrigger>
                                                                         <DropdownMenuContent align="start">
                                                                             {DURATION_OPTIONS.map(
-                                                                                (option) => (
+                                                                                (
+                                                                                    option
+                                                                                ) => (
                                                                                     <DropdownMenuItem
-                                                                                        key={option}
+                                                                                        key={
+                                                                                            option
+                                                                                        }
                                                                                         onSelect={() =>
-                                                                                            field.onChange(option)
+                                                                                            field.onChange(
+                                                                                                option
+                                                                                            )
                                                                                         }
                                                                                     >
-                                                                                        {option}
+                                                                                        {
+                                                                                            option
+                                                                                        }
                                                                                     </DropdownMenuItem>
                                                                                 )
                                                                             )}
@@ -331,10 +397,16 @@ const Task: React.FC<TaskProps> = ({
                                                         />
                                                     </div>
                                                     {/* Action Dropdown remains */}
-                                                    <ActionDropdown iconSize={16}>
+                                                    <ActionDropdown
+                                                        iconSize={16}
+                                                    >
                                                         <DropdownMenuItem
                                                             className="text-destructive"
-                                                            onClick={() => toggleEditing(false)}
+                                                            onClick={() =>
+                                                                toggleEditing(
+                                                                    false
+                                                                )
+                                                            }
                                                         >
                                                             <Trash className="mr-2 h-4 w-4 text-red-400" />
                                                             Cancel
@@ -360,96 +432,146 @@ const Task: React.FC<TaskProps> = ({
                         className="flex w-full items-center gap-2 text-base text-foreground font-medium cursor-pointer"
                         onClick={() => toggleEditing(true)}
                     >
-                        {useCheckbox ? (
-                            <Checkbox 
-                                checked={isChecked}
-                                onCheckedChange={handleCheckboxChange}
-                                className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
-                            />
-                        ) : (
-                            <Star 
-                                strokeWidth={1.5} 
-                                className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
-                                onClick={handleStarClick}
-                            />
+                        {!simplifiedTaskSuggestion && (
+                            <>
+                                {useCheckbox ? (
+                                    <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={handleCheckboxChange}
+                                        className={`h-5 w-5 rounded-full ${!isChecked && 'border-neutral-500'} data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                                    />
+                                ) : (
+                                    <Star
+                                        strokeWidth={1.5}
+                                        className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
+                                        onClick={handleStarClick}
+                                    />
+                                )}
+                            </>
                         )}
-                        <div className={`self-stretch my-auto ${isChecked ? 'line-through text-zinc-500' : ''}`}>{title}</div>
-                    </div>
-                    <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
-                        <div className="self-stretch flex items-center gap-4 my-auto">
-                            {/* Frequency Dropdown */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent"
-                                    >
-                                        {frequency}
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    {FREQUENCY_OPTIONS.map((option) => (
-                                        <DropdownMenuItem
-                                            key={option}
-                                            onSelect={() => handleFrequencyChange(option)}
-                                        >
-                                            {option}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            {/* Duration Dropdown */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent -ml-2"
-                                    >
-                                        {duration?.length === 0
-                                            ? 'None'
-                                            : duration}
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    {DURATION_OPTIONS.map((option) => (
-                                        <DropdownMenuItem
-                                            key={option}
-                                            onSelect={() => handleDurationChange(option)}
-                                        >
-                                            {option}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                        <div
+                            className={`self-stretch my-auto ${isChecked ? 'line-through text-zinc-500' : ''}`}
+                        >
+                            {simplifiedTaskSuggestion || title}
                         </div>
+                    </div>
+
+                    <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3 relative">
+                        {!simplifiedTaskSuggestion && (
+                            <div className="self-stretch flex items-center gap-4 my-auto">
+                                {/* Frequency Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent"
+                                        >
+                                            {frequency}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        {FREQUENCY_OPTIONS.map((option) => (
+                                            <DropdownMenuItem
+                                                key={option}
+                                                onSelect={() =>
+                                                    handleFrequencyChange(
+                                                        option
+                                                    )
+                                                }
+                                            >
+                                                {option}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                {/* Duration Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-auto px-3 py-1 text-xs border-border bg-background whitespace-nowrap rounded-md border-solid hover:bg-accent -ml-2"
+                                        >
+                                            {duration?.length === 0
+                                                ? 'None'
+                                                : duration}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                        {DURATION_OPTIONS.map((option) => (
+                                            <DropdownMenuItem
+                                                key={option}
+                                                onSelect={() =>
+                                                    handleDurationChange(option)
+                                                }
+                                            >
+                                                {option}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-1 whitespace-nowrap"
-                                onClick={handleSimplifyTask}
-                                disabled={isSimplifying}
-                            >
-                                <div className="w-4 h-4 text-primary">
-                                    {isSimplifying ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <WandSparkles size={16} />
-                                    )}
+                            {showSimplificationConfirmation ? (
+                                <div className='flex items-center'>
+                                    <Button
+                                        variant="ghost"
+                                        className="flex items-center gap-1"
+                                        onClick={handleAcceptSimplifiedTask}
+                                    >
+                                        <Check className="h-4 w-4" />
+                                        Accept
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="flex items-center gap-1"
+                                        onClick={handleRetrySimplifyTask}
+                                        disabled={isSimplifying}
+                                    >
+                                        <WandSparkles className="h-4 w-4" />
+                                        Try Again
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="flex items-center gap-1 absolute top-0 right-0"
+                                        onClick={handleCancelSimplifiedTask}
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Cancel
+                                    </Button>
                                 </div>
-                                <div>Simpler</div>
-                            </Button>
-                            <ActionDropdown iconSize={16}>
-                                <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={handleDeleteTask}
-                                >
-                                    <Trash className="mr-2 h-4 w-4 text-red-400" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </ActionDropdown>
+                            ) : (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        className="flex items-center gap-1"
+                                        onClick={handleSimplifyTask}
+                                        disabled={isSimplifying}
+                                    >
+                                        <div className="w-4 h-4 text-primary">
+                                            {isSimplifying ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <WandSparkles size={16} />
+                                            )}
+                                        </div>
+                                        <div>Simpler</div>
+                                    </Button>
+                                    <ActionDropdown iconSize={16}>
+                                        <DropdownMenuItem
+                                            className="text-destructive"
+                                            onClick={handleDeleteTask}
+                                        >
+                                            <Trash className="mr-2 h-4 w-4 text-red-400" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </ActionDropdown>
+                                </>
+                            )}
                         </div>
                     </div>
                 </>
