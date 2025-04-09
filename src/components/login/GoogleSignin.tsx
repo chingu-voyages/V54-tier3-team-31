@@ -1,7 +1,9 @@
-import { Button } from "@/components/ui/button"
-import { signIn } from "@/lib/auth"
+"use client";
 
-import React, { SVGProps } from 'react'
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Mail } from "lucide-react";
+import React, { SVGProps } from 'react';
 
 export function BxBxlGoogle({ 
   width = 24, 
@@ -29,21 +31,17 @@ export function BxBxlGoogle({
   )
 }
 
-export default function SignIn() {
+export default function GoogleSignin() {
+  const handleSignIn = async () => {
+    await signIn("google");
+  };
+
   return (
-    <form
-      action={async () => {
-        "use server"
-        await signIn("google")
-      }}
-    >
-      <Button 
-        type="submit" 
-        className="cursor-pointer flex items-center justify-center gap-[2px]"
-      >
-        Signin with
-        <BxBxlGoogle width={32} height={32} />
+    <div className="flex justify-center">
+      <Button onClick={handleSignIn} className="cursor-pointer flex items-center justify-center gap-[2px]" variant={'ghost'}>
+        <Mail className="mr-2"/>
+        Sign in with Google
       </Button>
-    </form>
-  )
+    </div>
+  );
 }
