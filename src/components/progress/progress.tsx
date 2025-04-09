@@ -10,6 +10,7 @@ import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 
+const today = new Date()
 const currentYear = new Date().getUTCFullYear()
 const currentMonth = new Date().getUTCMonth()
 // const currentWeek = new Date().getUTCWeek()
@@ -70,62 +71,45 @@ const Progress: React.FC = () => {
 
     // Handle previous month navigation
     const handlePrev = () => {
-        if (activeTab === 'monthly') {
-            if (month > 0) {
-                setMonth(month - 1)
-            } else {
-                setYear(year - 1)
-                setMonth(11)
-            }
-        } else if (activeTab === 'weekly') {
-            setWeekStartDate((prev) => {
-                const newStartDate = new Date(prev)
-                newStartDate.setUTCDate(newStartDate.getUTCDate() - 7)
-                return newStartDate
-            })
+        if (activeTab === 'weekly') {
+            const prevWeekStart = new Date(weekStartDate)
+            prevWeekStart.setUTCDate(prevWeekStart.getUTCDate() - 7)
 
-            setWeekEndDate((prev) => {
-                const newEndDate = new Date(prev)
-                newEndDate.setUTCDate(newEndDate.getUTCDate() - 7)
-                return newEndDate
-            })
+            const prevWeekEnd = new Date(weekEndDate)
+            prevWeekEnd.setUTCDate(prevWeekEnd.getUTCDate() - 7)
+
+            setWeekStartDate(prevWeekStart)
+            setWeekEndDate(prevWeekEnd)
+        } else {
+            // Monthly
+            if (month === 0) {
+                setMonth(11)
+                setYear((prev) => prev - 1)
+            } else {
+                setMonth((prev) => prev - 1)
+            }
         }
     }
 
     // Handle next month navigation (only allowed if it's before or equal to the current month)
     const handleNext = () => {
-        if (activeTab === 'monthly') {
-            if (year === currentYear && month === currentMonth) {
-                // Prevent navigating to the next month if it's already the current month
-                return
-            }
+        if (activeTab === 'weekly') {
+            const nextWeekStart = new Date(weekStartDate)
+            nextWeekStart.setUTCDate(nextWeekStart.getUTCDate() + 7)
 
-            if (month < 11) {
-                setMonth(month + 1)
-            } else {
-                setYear(year + 1)
+            const nextWeekEnd = new Date(weekEndDate)
+            nextWeekEnd.setUTCDate(nextWeekEnd.getUTCDate() + 7)
+
+            setWeekStartDate(nextWeekStart)
+            setWeekEndDate(nextWeekEnd)
+        } else {
+            // Monthly
+            if (month === 11) {
                 setMonth(0)
+                setYear((prev) => prev + 1)
+            } else {
+                setMonth((prev) => prev + 1)
             }
-        } else if (activeTab === 'weekly') {
-            if (
-                weekStartDate.toISOString() === startOfWeekUTC.toISOString() &&
-                weekEndDate.toISOString() === endOfWeekUTC.toISOString()
-            ) {
-                // Prevent navigating to the next week if it's already the current week
-                return
-            }
-
-            setWeekStartDate((prev) => {
-                const newStartDate = new Date(prev)
-                newStartDate.setUTCDate(newStartDate.getUTCDate() + 7)
-                return newStartDate
-            })
-
-            setWeekEndDate((prev) => {
-                const newEndDate = new Date(prev)
-                newEndDate.setUTCDate(newEndDate.getUTCDate() + 7)
-                return newEndDate
-            })
         }
     }
 
@@ -366,13 +350,20 @@ const Progress: React.FC = () => {
                                 <ChevronRight size={16} />
                             </Button>
                         </div>
-                        <div className="">
+                        <div className="flex items-center justify-center mt-2">
                             <p className="text-sm font-medium text-neutral-50">
-                                {new Date(year, month).toLocaleString(
-                                    'default',
-                                    { month: 'long' }
-                                )}{' '}
-                                {year}
+                                {activeTab === 'weekly'
+                                    ? `${weekStartDate.toLocaleDateString(
+                                          'default',
+                                          { month: 'long', day: 'numeric' }
+                                      )} - ${weekEndDate.toLocaleDateString(
+                                          'default',
+                                          { month: 'long', day: 'numeric' }
+                                      )}`
+                                    : `${new Date(year, month).toLocaleString(
+                                          'default',
+                                          { month: 'long' }
+                                      )} ${year}`}
                             </p>
                         </div>
                         {/* Legend for heatmap */}
