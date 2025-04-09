@@ -25,11 +25,12 @@ const endOfWeekUTC = new Date(startOfWeekUTC)
 endOfWeekUTC.setUTCDate(startOfWeekUTC.getUTCDate() + 6) // Set to Saturday (end of the week)
 endOfWeekUTC.setUTCHours(23, 59, 59, 999) // Ensure time is set to the end of the day in UTC
 
-function getRandomInt(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
 const Progress: React.FC = () => {
+    interface HeatmapValue {
+        date: string
+        count: number
+    }
+
     interface Completion {
         id: number
         name: string
@@ -54,6 +55,7 @@ const Progress: React.FC = () => {
     const [month, setMonth] = useState(currentMonth)
     const [weekStartDate, setWeekStartDate] = useState(startOfWeekUTC)
     const [weekEndDate, setWeekEndDate] = useState(endOfWeekUTC)
+    const [heatmapData, setHeatmapData] = useState<HeatmapValue[]>([])
 
     // const [week, setWeek] = useState(currentWeek)
 
@@ -65,20 +67,6 @@ const Progress: React.FC = () => {
     // to ensure the heatmap starts at the correct day
     const startDate = new Date(firstDayOfMonth)
     startDate.setUTCDate(firstDayOfMonth.getUTCDate() - 1)
-
-    //Generate heatmap data for the selected month for testing purposes
-    const randomValues = Array.from({ length: numDays }, (_, i) => {
-        const date = new Date(Date.UTC(year, month, i + 1)) // Explicitly set UTC
-        return {
-            date,
-            count: getRandomInt(0, 5),
-        }
-    })
-
-    //data for weekly view
-    const weeklyHeatmapData = randomValues.filter(({ date }) => {
-        return date >= weekStartDate && date <= weekEndDate
-    })
 
     // Handle previous month navigation
     const handlePrev = () => {
@@ -140,6 +128,21 @@ const Progress: React.FC = () => {
             })
         }
     }
+
+    // fetch heatmap data
+    useEffect(() => {
+        const fetchHeatmapData = async () => {
+            try {
+                const res = await fetch('/api/heatmap')
+                if (!res.ok) throw new Error('Failed to fetch heatmap data')
+                const data = await res.json()
+                setHeatmapData(data)
+            } catch (error) {
+                console.error('Error fetching heatmap data:', error)
+            }
+        }
+        fetchHeatmapData()
+    }, [])
 
     const handleSelectHabit = (habit: Habit) => {
         setSelectedHabit(habit)
@@ -217,7 +220,7 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={weekStartDate}
                                             endDate={weekEndDate}
-                                            values={weeklyHeatmapData}
+                                            values={heatmapData}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={(value) => {
@@ -239,7 +242,7 @@ const Progress: React.FC = () => {
                                             }}
                                             tooltipDataAttrs={(
                                                 value: {
-                                                    date: Date
+                                                    date: string
                                                     count: number
                                                 } | null
                                             ) =>
@@ -247,7 +250,9 @@ const Progress: React.FC = () => {
                                                     ? {
                                                           'data-tooltip-id':
                                                               'heatmap-tooltip',
-                                                          'data-tooltip-content': `${value.date
+                                                          'data-tooltip-content': `${new Date(
+                                                              value.date
+                                                          )
                                                               .toISOString()
                                                               .slice(
                                                                   0,
@@ -274,7 +279,7 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={startDate}
                                             endDate={lastDayOfMonth}
-                                            values={randomValues}
+                                            values={heatmapData}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={(value) => {
@@ -296,7 +301,7 @@ const Progress: React.FC = () => {
                                             }}
                                             tooltipDataAttrs={(
                                                 value: {
-                                                    date: Date
+                                                    date: string
                                                     count: number
                                                 } | null
                                             ) =>
@@ -304,7 +309,9 @@ const Progress: React.FC = () => {
                                                     ? {
                                                           'data-tooltip-id':
                                                               'heatmap-tooltip',
-                                                          'data-tooltip-content': `${value.date
+                                                          'data-tooltip-content': `${new Date(
+                                                              value.date
+                                                          )
                                                               .toISOString()
                                                               .slice(
                                                                   0,
