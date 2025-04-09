@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/db'
 import { goals, tasks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { duration } from 'drizzle-orm/gel-core'
 
 export async function GET() {
     const TEST_USER_ID = 'seed-user-1' // Replace with the session userid after account/auth is set up
