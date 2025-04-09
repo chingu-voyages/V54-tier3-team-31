@@ -10,7 +10,6 @@ import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 
-const today = new Date()
 const currentYear = new Date().getUTCFullYear()
 const currentMonth = new Date().getUTCMonth()
 // const currentWeek = new Date().getUTCWeek()
@@ -58,12 +57,9 @@ const Progress: React.FC = () => {
     const [weekEndDate, setWeekEndDate] = useState(endOfWeekUTC)
     const [heatmapData, setHeatmapData] = useState<HeatmapValue[]>([])
 
-    // const [week, setWeek] = useState(currentWeek)
-
     // get first and last days of the selected month
     const firstDayOfMonth = new Date(Date.UTC(year, month, 1))
     const lastDayOfMonth = new Date(Date.UTC(year, month + 1, 0))
-    const numDays = lastDayOfMonth.getUTCDate()
 
     // to ensure the heatmap starts at the correct day
     const startDate = new Date(firstDayOfMonth)
