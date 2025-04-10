@@ -87,6 +87,25 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 return updatedState; // Return the updated state
             }
         }
+        case 'TOGGLED_FOCUS': { // Added case for optimistic focus toggle
+            // Update localForage first for unauthenticated users
+            // Assuming toggleTaskFocusLocal exists and handles the persistence
+            // toggleTaskFocusLocal(action.id, action.isInFocus); // We'll call this from the hook instead to handle auth status
+            
+            const updatedState = state.map((t) => {
+                if (t.id === action.id) {
+                    return { ...t, isInFocus: action.isInFocus };
+                }
+                return t;
+            });
+            // Save updated state to local storage if tasks don't belong to a goal
+            // Note: This assumes saveTasksToLocal filters out goal tasks or handles them appropriately.
+            // Persistence (local storage update) is handled by the hook (`useTaskManagement`) 
+            // calling `toggleTaskFocusLocal` for unauthenticated users.
+            // Reducer only handles the optimistic state update.
+
+            return updatedState;
+        }
         default:
             throw new Error('Unknown action')
     }

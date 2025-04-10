@@ -23,6 +23,7 @@ export type TaskAction =
       }
     | { type: 'initial'; planTasks: schema.Task[] }
     | { type: 'edited'; values: TaskFormValues; id: number; goalId?: number }
+    | { type: 'TOGGLED_FOCUS'; id: number; isInFocus: boolean }
 
 export type GoalAction =
     | {

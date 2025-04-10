@@ -21,12 +21,12 @@ import {
 } from '@/lib/constants/taskOptions'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 // Renamed import and added updateTaskCompletion
-import { toggleTaskFocus as toggleTaskFocusLocal, updateTaskCompletion as updateTaskCompletionLocal } from '@/lib/localforage'
+import { updateTaskCompletion as updateTaskCompletionLocal } from '@/lib/localforage'
 import { Checkbox } from '../ui/checkbox'
 import { simplifyTask } from '@/app/(protected)/app/actions'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
-import { toggleTaskFocusForUser, updateTaskCompletionForUser } from '@/app/(protected)/app/actions/tasks'
+import { updateTaskCompletionForUser } from '@/app/(protected)/app/actions/tasks'
 
 interface TaskProps {
     id: number
@@ -47,6 +47,7 @@ interface TaskProps {
         completedAt?: Date
     ) => void
     completed?: boolean
+    onToggleFocus?: (taskId: number, currentFocusState: boolean) => void
 }
 
 const Task: React.FC<TaskProps> = ({
@@ -60,14 +61,14 @@ const Task: React.FC<TaskProps> = ({
     onEditTask,
     form,
     goalId,
-    isInFocus: propIsInFocus = false,
+    isInFocus = false,
     useCheckbox = false,
     onTaskComplete,
     completed = false,
+    onToggleFocus,
 }) => {
     const { status } = useSession() // Get session status, removed unused 'session'
     const [isEditing, setIsEditing] = useState(false)
-    const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
     const [isChecked, setIsChecked] = useState(completed)
     const [isSimplifying, setIsSimplifying] = useState(false)
     const [simplifiedTaskSuggestion, setSimplifiedTaskSuggestion] = useState<
@@ -79,9 +80,8 @@ const Task: React.FC<TaskProps> = ({
 
     // Update local state when prop changes
     useEffect(() => {
-        setLocalIsInFocus(propIsInFocus)
         setIsChecked(completed)
-    }, [propIsInFocus, completed])
+    }, [completed])
 
     // Always call the hook, but only use its result if there's a goalId
     const taskGoalContext = useTaskGoalContext()
@@ -179,31 +179,13 @@ const Task: React.FC<TaskProps> = ({
         }
     }
 
-    // Handle star button click (Updated based on prompt example)
+    // Handle star button click
      const handleStarClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        const newFocusState = !localIsInFocus;
-        // Optimistic UI update
-        setLocalIsInFocus(newFocusState);
-
-        try {
-            if (status === 'authenticated') {
-                await toggleTaskFocusForUser(id, newFocusState);
-                // Optionally refresh focus list if needed, or rely on revalidation
-            } else if (status === 'unauthenticated') {
-                // Pass goalId to local version if needed by its implementation
-                await toggleTaskFocusLocal(id, newFocusState); // Assuming goalId is not needed based on localforage.ts content
-            } else {
-                toast.info("Waiting for session status...");
-                // Revert optimistic update if status is loading
-                setLocalIsInFocus(!newFocusState);
-                return;
-            }
-        } catch (error) {
-            // Revert UI on error
-            setLocalIsInFocus(!newFocusState);
-            console.error('Error toggling task focus:', error);
-            toast.error(`Failed to update task focus: ${error instanceof Error ? error.message : String(error)}`);
+        if (onToggleFocus) {
+            onToggleFocus(id, isInFocus);
+        } else {
+             console.warn("onToggleFocus prop is missing from Task component");
         }
     };
 
@@ -321,10 +303,9 @@ const Task: React.FC<TaskProps> = ({
                                                     ) : (
                                                         <Star
                                                             strokeWidth={1.5}
-                                                            className={`${localIsInFocus ? 'text-neutral-500 fill-neutral-500' : 'text-neutral-500'}`}
-                                                            onClick={
-                                                                handleStarClick
-                                                            }
+                                                            className={`cursor-pointer ${isInFocus ? 'text-neutral-50' : 'text-neutral-500'}`}
+                                                            fill={isInFocus ? 'currentColor' : 'none'}
+                                                            onClick={handleStarClick}
                                                         />
                                                     )}
                                                     <Input
@@ -488,7 +469,8 @@ const Task: React.FC<TaskProps> = ({
                                 ) : (
                                     <Star
                                         strokeWidth={1.5}
-                                        className={`${localIsInFocus ? 'text-neutral-50 fill-neutral-50' : 'text-neutral-500'}`}
+                                        className={`cursor-pointer ${isInFocus ? 'text-neutral-50' : 'text-neutral-500'}`}
+                                        fill={isInFocus ? 'currentColor' : 'none'}
                                         onClick={handleStarClick}
                                     />
                                 )}

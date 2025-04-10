@@ -218,6 +218,7 @@ interface GoalProps extends Omit<GoalWithTasks, 'tasks'> {
     id: number
     useCheckbox?: boolean
     onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
+    onToggleFocus: (taskId: number, currentFocusState: boolean, goalId?: number) => void
 }
 
 const Goal: React.FC<GoalProps> = ({
@@ -234,7 +235,8 @@ const Goal: React.FC<GoalProps> = ({
     onEditGoal,
     onEditBestTime,
     useCheckbox = false,
-    onTaskComplete
+    onTaskComplete,
+    onToggleFocus,
 }) => {
     // State to track whether the TaskForm is visible
     const [isAddingTask, setIsAddingTask] = useState(false)
@@ -397,6 +399,7 @@ const Goal: React.FC<GoalProps> = ({
                     <Task
                         key={task.id}
                         {...task}
+                        completed={task.completed === null ? undefined : task.completed}
                         onDeleteTaskClick={onDeleteTask || (() => {})}
                         onEditTask={onEditTask || (() => {})}
                         form={form}
@@ -404,7 +407,7 @@ const Goal: React.FC<GoalProps> = ({
                         isInFocus={focusTasks.includes(task.id)}
                         useCheckbox={useCheckbox}
                         onTaskComplete={onTaskComplete}
-                        completed={task.completed || false}
+                        onToggleFocus={onToggleFocus}
                     />
                 ))}
             </div>

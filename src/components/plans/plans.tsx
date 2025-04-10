@@ -24,7 +24,7 @@ const PlansContent: React.FC = () => {
     const { goals, addGoal, deleteGoal, editGoal, refreshGoals } = useGoalManagement() // Get refreshGoals
 
     // Use our custom hook for task management, passing the refreshGoals callback
-    const { planTasks, addTask, editTask, deleteTask } = useTaskManagement(refreshGoals)
+    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus } = useTaskManagement(refreshGoals) // Destructure toggleTaskFocus
 
     // Form setup for editing tasks
     const taskForm = useForm<typeof TaskFormSchema._type>({
@@ -86,6 +86,7 @@ const PlansContent: React.FC = () => {
                             form={taskForm}
                             onDeleteTask={deleteTask}
                             onEditTask={editTask}
+                            onToggleTaskFocus={toggleTaskFocus}
                         />
 
                         {/* Predefined goals */}
@@ -98,6 +99,7 @@ const PlansContent: React.FC = () => {
                             onEditGoal={(id, newName) => editGoal(id, { name: newName })}
                             onEditBestTime={editGoal}
                             onAddTask={handleAddTask}
+                            onToggleTaskFocus={toggleTaskFocus}
                         />
 
                         {/* Add a Task button - visible on larger screens */}

@@ -15,8 +15,8 @@ import {
     addTaskForUser,
     editTaskForUser,
     deleteTaskForUser,
-    toggleTaskFocusForUser, // Added import
-    updateTaskCompletionForUser // Added import
+    updateTaskCompletionForUser,
+    toggleTaskFocusForUser
 } from '@/app/(protected)/app/actions/tasks' // Corrected path, added imports
 import { addTaskToGoalForUser } from '@/app/(protected)/app/actions/goals' // Added import for adding task to goal
 import { toast } from 'sonner'
@@ -194,36 +194,42 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
              return;
          }
          const newFocusState = !currentFocusState;
+
+         // --- Optimistic UI Update --- 
+         dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: newFocusState });
+
          try {
              if (status === 'authenticated') {
                  await toggleTaskFocusForUser(taskId, newFocusState);
-                 // Revalidation should handle UI updates in Focus/Plans pages
-                 // If it's a goal task, trigger the goal update callback for potential UI updates within the goal component
+                 // Server action revalidates path, no need to refreshTasks here
+                 // Optional: Trigger goal callback if needed for UI updates within goal context
                  if (goalId && onTaskInGoalUpdated) {
                      await onTaskInGoalUpdated();
-                 } else {
-                     // If it's a plan task, refresh the main task list if focus affects it directly (optional)
-                      // await refreshTasks(); // Usually not needed as focus is handled separately
-                  }
-              } else if (status === 'unauthenticated') {
-                  // Assuming toggleTaskFocusLocal only needs taskId and newFocusState
-                  await toggleTaskFocusLocal(taskId, newFocusState);
-                  // Update local state if necessary (planTaskReducer might need 'toggled_focus' action)
-                  // Or rely on components managing their own focus state based on localForage potentially
-                  if (goalId && onTaskInGoalUpdated) {
-                      await onTaskInGoalUpdated();
-                  }
-                  // Removed dispatch for 'toggled_focus' as it's not in the reducer
-                  // else {
-                  //     // Update planTasks state if focus is managed there
-                  //      dispatch({ type: 'toggled_focus', id: taskId, isInFocus: newFocusState });
-                  // }
-              }
-              toast.success(`Task ${newFocusState ? 'added to' : 'removed from'} focus.`);
+                 }
+             } else if (status === 'unauthenticated') {
+                 // Call local storage function (no need for reducer to call it again)
+                 await toggleTaskFocusLocal(taskId, newFocusState);
+                 // Optional: Trigger goal callback if needed
+                 if (goalId && onTaskInGoalUpdated) {
+                     await onTaskInGoalUpdated();
+                 }
+             }
+             // Don't toast success here, let the component handle it if needed
+             // toast.success(`Task ${newFocusState ? 'added to' : 'removed from'} focus.`);
          } catch (error) {
              console.error('Error toggling task focus:', error);
              toast.error(`Failed to update task focus: ${error instanceof Error ? error.message : String(error)}`);
-             // Revert optimistic UI update here if implemented in the component
+             // --- Revert Optimistic Update on Error --- 
+             dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: currentFocusState }); // Revert to original state
+             // Also revert local storage if unauthenticated and toggleTaskFocusLocal failed
+             if (status === 'unauthenticated') {
+                 try {
+                    await toggleTaskFocusLocal(taskId, currentFocusState); // Attempt revert
+                 } catch (revertError) {
+                     console.error('Error reverting local task focus:', revertError);
+                     toast.error('Failed to revert local focus state. Please refresh.');
+                 }
+             }
          }
      };
 

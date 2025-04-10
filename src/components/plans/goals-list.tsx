@@ -3,19 +3,21 @@
 import React from 'react'
 import { UseFormReturn } from 'react-hook-form'
 import { TaskFormValues, GoalWithTasks } from '@/lib/types/types'
+import { GoalFormValues } from '../../lib/types/types'
 import Goal from './goal'
 
 interface GoalsListProps {
     goals: GoalWithTasks[]
     form: UseFormReturn<TaskFormValues>
     onDeleteGoal: (id: number) => void
-    onDeleteTask: (id: number) => void
+    onDeleteTask: (id: number, goalId?: number) => void
     onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
     onEditGoal: (id: number, newName: string) => void
-    onEditBestTime: (id: number, updates: { bestTimeTitle?: string, bestTimeDescription?: string }) => void
+    onEditBestTime: (id: number, values: Partial<GoalFormValues>) => void
     onAddTask: (values: TaskFormValues, goalId?: number) => void
     useCheckbox?: boolean
     onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
+    onToggleTaskFocus: (taskId: number, currentFocusState: boolean, goalId?: number) => void
 }
 
 export const GoalsList: React.FC<GoalsListProps> = ({ 
@@ -28,7 +30,8 @@ export const GoalsList: React.FC<GoalsListProps> = ({
     onEditBestTime,
     onAddTask,
     useCheckbox = false,
-    onTaskComplete
+    onTaskComplete,
+    onToggleTaskFocus
 }) => {
     if (!goals.length) {
         return null
@@ -49,6 +52,7 @@ export const GoalsList: React.FC<GoalsListProps> = ({
                     onEditBestTime={onEditBestTime}
                     useCheckbox={useCheckbox}
                     onTaskComplete={onTaskComplete}
+                    onToggleFocus={(taskId: number, currentFocusState: boolean) => onToggleTaskFocus(taskId, currentFocusState, goal.id)}
                 />
             ))}
         </div>
