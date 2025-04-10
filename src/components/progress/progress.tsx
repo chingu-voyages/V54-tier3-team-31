@@ -10,7 +10,6 @@ import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { getAllGoalsFromLocal } from '@/lib/localforage'
-import { NextResponse } from 'next/server'
 
 interface HeatmapValue {
     userId: string

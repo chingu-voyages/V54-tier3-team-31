@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import { auth } from '@/lib/auth'
-import { getAllGoalsFromLocal } from '@/lib/localforage'
 import * as dotenv from 'dotenv'
 
 dotenv.config()
