@@ -21,10 +21,13 @@ const PlansContent: React.FC = () => {
     const [isAddingPlan, setIsAddingPlan] = useState<boolean>(false)
 
     // Call useGoalManagement first to get refreshGoals
-    const { goals, addGoal, deleteGoal, editGoal, refreshGoals } = useGoalManagement() // Get refreshGoals
+    const { goals, addGoal, deleteGoal, editGoal, refreshGoals, optimisticToggleTaskFocusInGoal } = useGoalManagement() // Destructure optimistic toggle
 
-    // Use our custom hook for task management, passing the refreshGoals callback
-    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus } = useTaskManagement(refreshGoals) // Destructure toggleTaskFocus
+    // Use our custom hook for task management, passing the refreshGoals callback AND the optimistic toggle function
+    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus } = useTaskManagement(
+        refreshGoals, 
+        optimisticToggleTaskFocusInGoal // Pass the function here
+        )
 
     // Form setup for editing tasks
     const taskForm = useForm<typeof TaskFormSchema._type>({

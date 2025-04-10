@@ -176,6 +176,26 @@ export function goalReducer(state: GoalState, action: GoalAction) {
             saveGoalsToLocal(updatedGoals);
             return updatedGoals; // Return the updated state
         }
+        case 'TOGGLE_TASK_FOCUS_IN_GOAL': { // Added action to toggle task focus within a goal
+            const updatedGoalsState = state.map(goal => {
+                if (goal.id === action.goalId) {
+                    const updatedTasks = goal.tasks.map(task => {
+                        if (task.id === action.taskId) {
+                            return { ...task, isInFocus: action.isInFocus };
+                        }
+                        return task;
+                    });
+                    return { ...goal, tasks: updatedTasks };
+                }
+                return goal;
+            });
+            // Persistence (local storage) for goal tasks' focus state needs to be handled carefully.
+            // If toggleTaskFocusLocal can handle tasks within goals, the hook will call it.
+            // If not, we might need to update saveGoalsToLocal or have a specific function.
+            // For now, reducer only handles optimistic state update.
+            // saveGoalsToLocal(updatedGoalsState); // Avoid saving from reducer
+            return updatedGoalsState;
+        }
         default:
             throw new Error('Unknown action')
     }

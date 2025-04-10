@@ -39,7 +39,7 @@ interface TaskProps {
     onEditTask: (id: number, values: TaskFormValues, goalId?: number) => void
     form: UseFormReturn<TaskFormValues>
     goalId?: number
-    isInFocus?: boolean
+    isInFocus: boolean
     useCheckbox?: boolean
     onTaskComplete?: (
         taskId: number,

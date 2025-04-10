@@ -33,6 +33,7 @@ export type GoalAction =
     | { type: 'added'; values: GoalFormValues }
     | { type: 'initial'; goals: GoalWithTasks[] }
     | { type: 'edited'; values: GoalFormValues; id: number }
+    | { type: 'TOGGLE_TASK_FOCUS_IN_GOAL'; goalId: number; taskId: number; isInFocus: boolean }
 
 export interface GoalWithTasks extends schema.Goal {
     tasks: schema.Task[]

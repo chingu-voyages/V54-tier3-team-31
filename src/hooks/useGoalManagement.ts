@@ -128,6 +128,15 @@ export function useGoalManagement() {
         }
     }
 
+    // Function to dispatch optimistic focus toggle for a task within a goal
+    const optimisticToggleTaskFocusInGoal = (goalId: number, taskId: number, newFocusState: boolean) => {
+        dispatch({
+            type: 'TOGGLE_TASK_FOCUS_IN_GOAL',
+            goalId,
+            taskId,
+            isInFocus: newFocusState
+        });
+    };
 
     return {
         goals: isInitialized ? goals : [], // Return empty array until initialized
@@ -136,6 +145,7 @@ export function useGoalManagement() {
         // editBestTime, // Removed
         deleteGoal,
         refreshGoals, // Expose refresh function if needed externally
-        isInitialized // Expose initialization status
+        isInitialized, // Expose initialization status
+        optimisticToggleTaskFocusInGoal // Expose the new function
     }
 }

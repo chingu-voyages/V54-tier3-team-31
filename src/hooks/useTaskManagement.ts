@@ -21,8 +21,13 @@ import {
 import { addTaskToGoalForUser } from '@/app/(protected)/app/actions/goals' // Added import for adding task to goal
 import { toast } from 'sonner'
 
+// Define the type for the optional optimistic toggle function
+type OptimisticGoalToggleFn = (goalId: number, taskId: number, newFocusState: boolean) => void;
 
-export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
+export function useTaskManagement(
+    onTaskInGoalUpdated?: () => Promise<void>,
+    optimisticGoalToggle?: OptimisticGoalToggleFn // Add optional parameter
+    ) {
     const [planTasks, dispatch] = useReducer(planTaskReducer, [])
     const { status } = useSession() // Get session status, removed unused 'session'
     const pathname = usePathname()
@@ -196,7 +201,12 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
          const newFocusState = !currentFocusState;
 
          // --- Optimistic UI Update --- 
-         dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: newFocusState });
+         // Dispatch differently based on whether it's a plan task or goal task
+         if (goalId && optimisticGoalToggle) {
+             optimisticGoalToggle(goalId, taskId, newFocusState);
+         } else {
+             dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: newFocusState });
+         }
 
          try {
              if (status === 'authenticated') {
@@ -220,7 +230,12 @@ export function useTaskManagement(onTaskInGoalUpdated?: () => Promise<void>) {
              console.error('Error toggling task focus:', error);
              toast.error(`Failed to update task focus: ${error instanceof Error ? error.message : String(error)}`);
              // --- Revert Optimistic Update on Error --- 
-             dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: currentFocusState }); // Revert to original state
+             // Revert differently based on whether it's a plan task or goal task
+             if (goalId && optimisticGoalToggle) {
+                 optimisticGoalToggle(goalId, taskId, currentFocusState); // Revert goal task state
+             } else {
+                 dispatch({ type: 'TOGGLED_FOCUS', id: taskId, isInFocus: currentFocusState }); // Revert plan task state
+             }
              // Also revert local storage if unauthenticated and toggleTaskFocusLocal failed
              if (status === 'unauthenticated') {
                  try {

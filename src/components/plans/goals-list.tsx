@@ -17,7 +17,7 @@ interface GoalsListProps {
     onAddTask: (values: TaskFormValues, goalId?: number) => void
     useCheckbox?: boolean
     onTaskComplete?: (taskId: number, completed: boolean, completedAt?: Date) => void
-    onToggleTaskFocus: (taskId: number, currentFocusState: boolean, goalId?: number) => void
+    onToggleTaskFocus?: (taskId: number, currentFocusState: boolean, goalId?: number) => void
 }
 
 export const GoalsList: React.FC<GoalsListProps> = ({ 
@@ -52,7 +52,7 @@ export const GoalsList: React.FC<GoalsListProps> = ({
                     onEditBestTime={onEditBestTime}
                     useCheckbox={useCheckbox}
                     onTaskComplete={onTaskComplete}
-                    onToggleFocus={(taskId: number, currentFocusState: boolean) => onToggleTaskFocus(taskId, currentFocusState, goal.id)}
+                    onToggleFocus={(taskId: number, currentFocusState: boolean) => onToggleTaskFocus?.(taskId, currentFocusState, goal.id)}
                 />
             ))}
         </div>

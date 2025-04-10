@@ -248,7 +248,7 @@ const Goal: React.FC<GoalProps> = ({
     const nameInputRef = useRef<HTMLInputElement>(null)
     // Create ref for the cancel button
     const cancelButtonRef = useRef<HTMLButtonElement>(null)
-    const [focusTasks, setFocusTasks] = useState<number[]>([])
+    // const [focusTasks, setFocusTasks] = useState<number[]>([])
 
     // Use the shared context for goal tasks
     const { addTaskToGoal } = useTaskGoalContext()
@@ -256,18 +256,18 @@ const Goal: React.FC<GoalProps> = ({
     // Use tasks from context if available, otherwise use props
     const currentTasks = tasks
 
-    useEffect(() => {
-        const fetchFocusTasks = async () => {
-            try {
-                const tasks = await getTasksInFocus()
-                setFocusTasks(tasks.map((task) => task.id))
-            } catch (error) {
-                console.error('Error fetching focus tasks:', error)
-            }
-        }
+    // useEffect(() => {
+    //     const fetchFocusTasks = async () => {
+    //         try {
+    //             const tasks = await getTasksInFocus()
+    //             setFocusTasks(tasks.map((task) => task.id))
+    //         } catch (error) {
+    //             console.error('Error fetching focus tasks:', error)
+    //         }
+    //     }
 
-        fetchFocusTasks()
-    }, [])
+    //     fetchFocusTasks()
+    // }, [])
 
     // Handler for adding a task to this specific goal
     const handleAddTask = async (values: TaskFormValues) => {
@@ -404,7 +404,7 @@ const Goal: React.FC<GoalProps> = ({
                         onEditTask={onEditTask || (() => {})}
                         form={form}
                         goalId={id}
-                        isInFocus={focusTasks.includes(task.id)}
+                        isInFocus={task.isInFocus ?? false}
                         useCheckbox={useCheckbox}
                         onTaskComplete={onTaskComplete}
                         onToggleFocus={onToggleFocus}
