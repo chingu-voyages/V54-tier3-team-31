@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
 import { auth } from '@/lib/auth'
+import { getAllGoalsFromLocal } from '@/lib/localforage'
 import * as dotenv from 'dotenv'
 
 dotenv.config()
@@ -22,11 +23,17 @@ export async function GET() {
     const session = await auth()
     const user_id = session?.user?.id
     try {
-        const completedTasks = await db
-            .select()
-            .from(heatmapStatisticsView)
-            .where(eq(heatmapStatisticsView.userId, user_id))
-        return NextResponse.json({ data: completedTasks })
+        if (user_id) {
+            const completedTasks = await db
+                .select()
+                .from(heatmapStatisticsView)
+                .where(eq(heatmapStatisticsView.userId, user_id))
+            return NextResponse.json({ data: completedTasks })
+        } else {
+            return NextResponse.json({
+                message: 'Fetch heatmap data client-side for anonymous users.',
+            })
+        }
     } catch (error) {
         console.error('Error fetching completed tasks view: ', error)
         return NextResponse.json(

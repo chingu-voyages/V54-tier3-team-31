@@ -9,6 +9,8 @@ import CalendarHeatmap from 'react-calendar-heatmap'
 import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
+import { getAllGoalsFromLocal } from '@/lib/localforage'
+import { NextResponse } from 'next/server'
 
 interface HeatmapValue {
     userId: string
@@ -87,11 +89,57 @@ const Progress: React.FC = () => {
     const fetchHeatmapData = async () => {
         try {
             const response = await fetch('/api/heatmap')
-            if (response.ok) {
-                const data = await response.json()
-                setHeatmapData(data.data)
+            const data = await response.json()
+
+            if (data.message) {
+                const localGoals = await getAllGoalsFromLocal()
+                console.log(
+                    'Fetched localGoals:',
+                    JSON.stringify(localGoals, null, 2)
+                )
+
+                const completedTasksByDate: Record<string, number> = {}
+
+                localGoals.forEach((goal) => {
+                    goal.tasks.forEach((task) => {
+                        console.log('Processing task:', task)
+                        if (task.completed && task.completedAt) {
+                            const date =
+                                task.completedAt instanceof Date
+                                    ? task.completedAt
+                                    : new Date(task.completedAt)
+                            if (isNaN(date.getTime())) {
+                                console.error('Invalid date for task:', task)
+                            } else {
+                                const formattedDate = date
+                                    .toISOString()
+                                    .split('T')[0]
+                                completedTasksByDate[formattedDate] =
+                                    (completedTasksByDate[formattedDate] || 0) +
+                                    1
+                            }
+                        } else {
+                            console.warn(
+                                'Task skipped due to missing properties:',
+                                task
+                            )
+                        }
+                    })
+                })
+
+                console.log('Completed tasks by date:', completedTasksByDate)
+                const heatmapData = Object.entries(completedTasksByDate).map(
+                    ([date, count]) => ({
+                        userId: 'anonymous',
+                        completionDate: date,
+                        completedTasks: count,
+                    })
+                )
+                console.log('heatmap data:', heatmapData)
+
+                setHeatmapData(heatmapData)
             } else {
-                console.error('Error fetching heatmap data')
+                setHeatmapData(data.data)
             }
         } catch (error) {
             console.error('Error fetching heatmap data:', error)
@@ -100,10 +148,37 @@ const Progress: React.FC = () => {
 
     // Fetch completed habit data from the database
     const fetchHabits = async () => {
-        const res = await fetch('/api/progress')
-        const data = await res.json()
-        setHabits(data)
-        setLoading(false)
+        try {
+            const response = await fetch('/api/progress')
+            const data = await response.json()
+
+            if (data.message) {
+                // Fetch data client-side for anonymous users
+                const localGoals = await getAllGoalsFromLocal()
+
+                const groupedByGoal = localGoals.map((goal) => ({
+                    id: goal.id.toString(),
+                    title: goal.name,
+                    count: goal.tasks.filter((task) => task.completed).length,
+                    completions: goal.tasks
+                        .filter((task) => task.completed)
+                        .map((task) => ({
+                            id: task.id,
+                            name: task.title,
+                            frequency: task.frequency ?? '',
+                            duration: task.duration ?? '',
+                        })),
+                }))
+
+                setHabits(groupedByGoal)
+                setLoading(false)
+            } else {
+                setHabits(data)
+                setLoading(false)
+            }
+        } catch (error) {
+            console.error('Error fetching progress data:', error)
+        }
     }
 
     useEffect(() => {
