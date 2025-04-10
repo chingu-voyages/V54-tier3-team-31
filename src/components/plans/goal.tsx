@@ -17,7 +17,7 @@ import { GoalWithTasks, TaskFormValues } from '@/lib/types/types'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
 import TaskForm from './task-form'
 import { Input } from '@/components/ui/input'
-import { getTasksInFocus } from '@/lib/localforage'
+import { usePathname } from 'next/navigation'
 
 // Task type for better type safety
 interface TaskItem {
@@ -238,6 +238,14 @@ const Goal: React.FC<GoalProps> = ({
     onTaskComplete,
     onToggleFocus,
 }) => {
+    const pathname = usePathname();
+
+    // Use the shared context for goal tasks
+    const { addTaskToGoal } = useTaskGoalContext()
+
+    // Use tasks from context if available, otherwise use props
+    const currentTasks = tasks
+
     // State to track whether the TaskForm is visible
     const [isAddingTask, setIsAddingTask] = useState(false)
     // State to track whether the goal name is being edited
@@ -248,26 +256,6 @@ const Goal: React.FC<GoalProps> = ({
     const nameInputRef = useRef<HTMLInputElement>(null)
     // Create ref for the cancel button
     const cancelButtonRef = useRef<HTMLButtonElement>(null)
-    // const [focusTasks, setFocusTasks] = useState<number[]>([])
-
-    // Use the shared context for goal tasks
-    const { addTaskToGoal } = useTaskGoalContext()
-
-    // Use tasks from context if available, otherwise use props
-    const currentTasks = tasks
-
-    // useEffect(() => {
-    //     const fetchFocusTasks = async () => {
-    //         try {
-    //             const tasks = await getTasksInFocus()
-    //             setFocusTasks(tasks.map((task) => task.id))
-    //         } catch (error) {
-    //             console.error('Error fetching focus tasks:', error)
-    //         }
-    //     }
-
-    //     fetchFocusTasks()
-    // }, [])
 
     // Handler for adding a task to this specific goal
     const handleAddTask = async (values: TaskFormValues) => {
@@ -349,6 +337,16 @@ const Goal: React.FC<GoalProps> = ({
         }
     }, [isEditingName, handleUpdateGoalName])
 
+    // Determine if the goal should be hidden on the /focus page
+    const shouldHideGoal = 
+        pathname === '/focus' && 
+        currentTasks.every(task => !(task.isInFocus ?? false));
+
+    // If on /focus page and no tasks are in focus, don't render the goal
+    if (shouldHideGoal) {
+        return null;
+    }
+
     return (
         <div className="flex w-full flex-col items-stretch mt-6 border-b border-zinc-200 dark:border-zinc-800 pb-4">
             <div className="flex w-full items-center text-xl font-semibold mb-3 justify-between">
@@ -376,7 +374,8 @@ const Goal: React.FC<GoalProps> = ({
                             </Button>
                         </div>
                     </div>
-                ) : (
+                ) : 
+                (
                     <div
                         className="cursor-pointer hover:text-primary transition-colors"
                         onClick={() => setIsEditingName(true)}

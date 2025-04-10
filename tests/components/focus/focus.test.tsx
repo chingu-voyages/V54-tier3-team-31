@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Focus from '../../../src/components/focus/focus'
@@ -7,14 +7,24 @@ import '@testing-library/jest-dom/vitest'
 import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
 import { getTasksInFocus, updateTaskCompletion, toggleTaskFocus, cleanupOldFocusTasks } from '@/lib/localforage'
+import { cleanupOldFocusTasks as cleanupOldFocusTasksDb, getFocusTasksForUser } from '@/app/(protected)/app/actions/focus'
+import { useSession } from 'next-auth/react'
 import type { TaskFormValues } from '@/lib/types/types'
 import type { Task } from '@/lib/db/schema'
 import type { ReactNode } from 'react'
+import { act } from 'react'
+import type { RenderResult } from '@testing-library/react'
 
 // Mock next-auth/react
 vi.mock('next-auth/react', () => ({
     useSession: vi.fn(() => ({ status: 'unauthenticated', data: null })), // Default mock
     SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Add Next.js headers mock to prevent "headers was called outside a request scope" error
+vi.mock('next/headers', () => ({
+    headers: vi.fn(() => new Map()),
+    cookies: vi.fn(() => new Map())
 }));
 
 // Mock other required components and hooks
@@ -66,6 +76,14 @@ vi.mock('@/lib/localforage', () => ({
     cleanupOldFocusTasks: vi.fn().mockResolvedValue(undefined)
 }))
 
+// Mock the server actions
+vi.mock('@/app/(protected)/app/actions/focus', () => ({
+    cleanupOldFocusTasks: vi.fn().mockResolvedValue(undefined),
+    getFocusTasksForUser: vi.fn().mockResolvedValue([]),
+    toggleTaskFocusForUser: vi.fn().mockResolvedValue(undefined),
+    updateTaskCompletionForUser: vi.fn().mockResolvedValue(undefined)
+}))
+
 // Mock GoalsList component
 vi.mock('../../../src/components/plans/goals-list', () => ({
     default: ({ goals }: { goals: Array<{
@@ -105,7 +123,8 @@ vi.mock('../../../src/components/focus/focus-task', () => ({
         onTaskComplete,
         onFrequencyChange,
         onDurationChange,
-        onDeleteTask
+        onDeleteTask,
+        onEditTask,
     }: {
         id: number
         title: string
@@ -116,6 +135,7 @@ vi.mock('../../../src/components/focus/focus-task', () => ({
         onFrequencyChange?: (id: number, frequency: string) => void
         onDurationChange?: (id: number, duration: string) => void
         onDeleteTask?: (id: number) => void
+        onEditTask?: (id: number, values: TaskFormValues) => void
     }) => (
         <div data-testid={`focus-task-${id}`} className="task">
             <input 
@@ -128,6 +148,7 @@ vi.mock('../../../src/components/focus/focus-task', () => ({
             <button data-testid={`duration-${id}`} onClick={() => onDurationChange?.(id, '15 mins')}>{duration}</button>
             <button data-testid={`more-${id}`}>More</button>
             <button data-testid={`delete-${id}`} onClick={() => onDeleteTask?.(id)}>Delete</button>
+            <button data-testid={`edit-${id}`} onClick={() => onEditTask?.(id, { title, frequency, duration })}>Edit</button>
         </div>
     )
 }))
@@ -228,7 +249,8 @@ describe('Focus Component', () => {
             deleteGoal: mockDeleteGoal, // Use added mock
             // editBestTime: vi.fn(), // Removed editBestTime
             refreshGoals: mockRefreshGoals, // Added
-            isInitialized: true // Added
+            isInitialized: true,
+            optimisticToggleTaskFocusInGoal: vi.fn()
         });
         // Mock getTasksInFocus to return mockTasks
         vi.mocked(getTasksInFocus).mockResolvedValue(mockTasks)
@@ -274,7 +296,8 @@ describe('Focus Component', () => {
             editGoal: mockEditGoal,
             deleteGoal: mockDeleteGoal,
             refreshGoals: mockRefreshGoals,
-            isInitialized: true
+            isInitialized: true,
+            optimisticToggleTaskFocusInGoal: vi.fn()
         });
 
         render(<Focus />)
@@ -406,5 +429,185 @@ describe('Focus Component', () => {
         
         expect(mockDeleteTask).toHaveBeenCalledWith(1, undefined)
     })
+
+    // --- Test for Cleanup Logic ---
+    afterEach(() => {
+      vi.restoreAllMocks(); // Restore spies
+    });
+
+    it('calls cleanup and handles old focus tasks (unauthenticated)', async () => {
+        // Reset mocks before test
+        vi.resetAllMocks();
+        
+        // Create a simple task list to return from getTasksInFocus
+        const mockTaskList = [
+            {
+                id: 1,
+                title: 'Test Task',
+                frequency: 'Daily',
+                duration: '5 mins',
+                completed: false,
+                isInFocus: true,
+                completedAt: null,
+                goalId: null,
+                userId: 'test-user',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                difficulty: null,
+                description: null
+            }
+        ];
+        
+        // Setup mocks for this specific test
+        vi.mocked(getTasksInFocus).mockResolvedValue(mockTaskList);
+        vi.mocked(cleanupOldFocusTasks).mockResolvedValue(undefined);
+        
+        // Mock useSession for unauthenticated
+        vi.mocked(useSession).mockReturnValue({ 
+            status: 'unauthenticated', 
+            data: null, 
+            update: async () => null 
+        });
+        
+        // Mock the hooks to return simple values
+        vi.mocked(useTaskManagement).mockReturnValue({
+            planTasks: mockTaskList,
+            addTask: vi.fn(),
+            editTask: vi.fn(),
+            deleteTask: vi.fn(),
+            toggleTaskFocus: vi.fn(),
+            updateTaskCompletion: vi.fn(),
+            refreshTasks: vi.fn(),
+            isInitialized: true
+        });
+        
+        vi.mocked(useGoalManagement).mockReturnValue({
+            goals: [],
+            addGoal: vi.fn(),
+            editGoal: vi.fn(),
+            deleteGoal: vi.fn(),
+            refreshGoals: vi.fn(),
+            isInitialized: true,
+            optimisticToggleTaskFocusInGoal: vi.fn()
+        });
+        
+        // Render the component
+        render(<Focus />);
+        
+        // Use fake timers to control asynchronous operations
+        vi.useFakeTimers();
+
+        // Wrap rendering in act() to handle React state updates
+        await act(async () => {
+            render(<Focus />);
+            // Advance timers to trigger useEffect hooks
+            vi.advanceTimersToNextTimer();
+        });
+        
+        // Restore real timers
+        vi.useRealTimers();
+        
+        // Check that cleanupOldFocusTasks gets called
+        await vi.waitFor(() => {
+            expect(cleanupOldFocusTasks).toHaveBeenCalled();
+        });
+        
+        // Check that getTasksInFocus gets called after cleanup
+        await vi.waitFor(() => {
+            expect(getTasksInFocus).toHaveBeenCalled();
+        });
+    });
+
+    it('calls cleanup and handles old focus tasks (authenticated)', async () => {
+        // Reset mocks before test
+        vi.resetAllMocks();
+        
+        // Create a simple task list to return from getTasksInFocus
+        const mockTaskList = [
+            {
+                id: 1,
+                title: 'Test Task',
+                frequency: 'Daily',
+                duration: '5 mins',
+                completed: false,
+                isInFocus: true,
+                completedAt: null,
+                goalId: null,
+                userId: 'test-user',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                difficulty: null,
+                description: null
+            }
+        ];
+        
+        // Setup mocks for this specific test
+        vi.mocked(getFocusTasksForUser).mockResolvedValue(mockTaskList);
+        vi.mocked(cleanupOldFocusTasksDb).mockResolvedValue(undefined);
+        
+        // Mock useSession for authenticated user
+        vi.mocked(useSession).mockReturnValue({ 
+            status: 'authenticated', 
+            data: {
+                user: { id: 'test-user', email: 'test@example.com' },
+                expires: '2024-12-31'
+            },
+            update: async () => null 
+        });
+        
+        // Mock the hooks to return simple values
+        vi.mocked(useTaskManagement).mockReturnValue({
+            planTasks: mockTaskList,
+            addTask: vi.fn(),
+            editTask: vi.fn(),
+            deleteTask: vi.fn(),
+            toggleTaskFocus: vi.fn(),
+            updateTaskCompletion: vi.fn(),
+            refreshTasks: vi.fn(),
+            isInitialized: true
+        });
+        
+        vi.mocked(useGoalManagement).mockReturnValue({
+            goals: [],
+            addGoal: vi.fn(),
+            editGoal: vi.fn(),
+            deleteGoal: vi.fn(),
+            refreshGoals: vi.fn(),
+            isInitialized: true,
+            optimisticToggleTaskFocusInGoal: vi.fn()
+        });
+        
+        // Use fake timers for controlled testing
+        vi.useFakeTimers();
+        
+        // Render the component wrapped in act
+        let rendered: RenderResult = {} as RenderResult;
+        await act(async () => {
+            rendered = render(<Focus />);
+        });
+        
+        // Advance timers to trigger useEffects
+        await act(async () => {
+            vi.runAllTimers();
+        });
+        
+        // Restore real timers
+        vi.useRealTimers();
+        
+        // Check that the server action cleanupOldFocusTasksDb gets called (for authenticated users)
+        await vi.waitFor(() => {
+            expect(cleanupOldFocusTasksDb).toHaveBeenCalled();
+        });
+        
+        // Check that the server action getFocusTasksForUser gets called after cleanup
+        await vi.waitFor(() => {
+            expect(getFocusTasksForUser).toHaveBeenCalled();
+        });
+        
+        // Clean up
+        rendered.unmount();
+    });
+
+    // --- End of Test for Cleanup Logic ---
 
 })

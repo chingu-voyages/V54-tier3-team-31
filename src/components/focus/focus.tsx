@@ -58,7 +58,6 @@ const Focus: React.FC = () => {
     // Removed toggleTaskFocus, updateTaskCompletion from destructuring as they are now part of the hook's return value
     const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus, updateTaskCompletion } = useTaskManagement(refreshGoals)
 
-    console.log("currently the plantasks", planTasks)
     const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
