@@ -1,29 +1,29 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { habits } from '@/lib/schema'
+import { db } from '@/lib/db/db'
+import { goals, Goal, Task } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET() {
     const TEST_USER_ID = '1' // Replace with the session userid after account/auth is set up
 
-    const allHabits = await db.query.habits.findMany({
-        where: eq(habits.userId, TEST_USER_ID),
+    const allGoals = await db.query.goals.findMany({
+        where: eq(goals.userId, TEST_USER_ID),
         with: {
-            habitLogs: true,
+            tasks: true,
         },
     })
 
-    const result = allHabits.map((habit) => ({
-        id: habit.id.toString(),
-        title: habit.name,
-        count: habit.habitLogs.filter((log) => log.completed).length,
-        completions: habit.habitLogs
-            .filter((log) => log.completed)
-            .map((log) => ({
+    const result = allGoals.map((goal: Goal & { tasks: Task[] }) => ({
+        id: goal.id.toString(),
+        title: goal.name,
+        count: goal.tasks.filter((log: Task) => log.completed).length,
+        completions: goal.tasks
+            .filter((log: Task) => log.completed)
+            .map((log: Task) => ({
                 id: log.id,
-                name: habit.name,
-                frequency: habit.frequency || 'unknown',
-                duration: log.date.toISOString(),
+                name: goal.name,
+                frequency: goal.frequency || 'unknown',
+                duration: log.completedAt?.toISOString() ?? log.updatedAt.toISOString(),
             })),
     }))
     return NextResponse.json(result)
