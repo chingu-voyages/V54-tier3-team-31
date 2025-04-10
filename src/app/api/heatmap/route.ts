@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { drizzle } from 'drizzle-orm/neon-http'
 import { neon } from '@neondatabase/serverless'
+import { auth } from '@/lib/auth'
 import * as dotenv from 'dotenv'
 
 dotenv.config()
@@ -18,12 +19,13 @@ const heatmapStatisticsView = pgTable('heatmap_statistics', {
 })
 
 export async function GET() {
-    const TEST_USER_ID = 'seed-user-1'
+    const session = await auth()
+    const user_id = session?.user?.id
     try {
         const completedTasks = await db
             .select()
             .from(heatmapStatisticsView)
-            .where(eq(heatmapStatisticsView.userId, TEST_USER_ID))
+            .where(eq(heatmapStatisticsView.userId, user_id))
         return NextResponse.json({ data: completedTasks })
     } catch (error) {
         console.error('Error fetching completed tasks view: ', error)

@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/db'
 import { goals, tasks } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
 
 export async function GET() {
-    const TEST_USER_ID = 'seed-user-1' // Replace with the session userid after account/auth is set up
-
+    const session = await auth()
+    const user_id = session?.user?.id
     try {
         // get completed tasks for the user
         const completedTasks = await db
@@ -19,9 +20,7 @@ export async function GET() {
             })
             .from(tasks)
             .leftJoin(goals, eq(tasks.goalId, goals.id))
-            .where(
-                and(eq(tasks.userId, TEST_USER_ID), eq(tasks.completed, true))
-            )
+            .where(and(eq(tasks.userId, user_id), eq(tasks.completed, true)))
 
         // Group tasks by goal
         const groupedByGoal = completedTasks.reduce<Record<number, any>>(
