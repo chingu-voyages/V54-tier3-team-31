@@ -10,40 +10,67 @@ import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 
-const currentYear = new Date().getUTCFullYear()
-const currentMonth = new Date().getUTCMonth()
+interface HeatmapValue {
+    userId: string
+    completionDate: string
+    completedTasks: number
+}
 
-// Calculate the start and end dates of the current week in UTC
-const startOfWeekUTC = new Date()
-startOfWeekUTC.setUTCDate(
-    startOfWeekUTC.getUTCDate() - startOfWeekUTC.getUTCDay() - 1
-)
-startOfWeekUTC.setUTCHours(0, 0, 0, 0)
+interface Completion {
+    id: number
+    name: string
+    frequency: string
+    duration: string
+}
 
-const endOfWeekUTC = new Date(startOfWeekUTC)
-endOfWeekUTC.setUTCDate(startOfWeekUTC.getUTCDate() + 6)
-endOfWeekUTC.setUTCHours(23, 59, 59, 999)
+interface Habit {
+    id: string
+    title: string
+    count: number
+    completions: Completion[]
+}
+
+const getWeekRange = () => {
+    const start = new Date()
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay() - 1)
+    start.setUTCHours(0, 0, 0, 0)
+
+    const end = new Date(start)
+    end.setUTCDate(start.getUTCDate() + 6)
+    end.setUTCHours(23, 59, 59, 999)
+
+    return { start, end }
+}
+
+const getMonthRange = (year: number, month: number) => {
+    const firstDay = new Date(Date.UTC(year, month, 1))
+    const lastDay = new Date(Date.UTC(year, month + 1, 0))
+    const startDate = new Date(firstDay)
+    startDate.setUTCDate(firstDay.getUTCDate() - 1)
+
+    return { startDate, endDate: lastDay }
+}
+
+const getClassForValue = (value: HeatmapValue | undefined): string => {
+    const count = Number(value?.completedTasks ?? 0)
+    if (count === 0) return 'color-scale-0'
+    if (count === 1) return 'color-scale-1'
+    if (count >= 2 && count < 4) return 'color-scale-2'
+    return 'color-scale-3'
+}
+
+const getTooltipAttrs = (value: HeatmapValue) =>
+    value?.completionDate
+        ? {
+              'data-tooltip-id': 'heatmap-tooltip',
+              'data-tooltip-content': `${value.completionDate.slice(0, 10)} has count: ${value.completedTasks}`,
+          }
+        : {}
 
 const Progress: React.FC = () => {
-    interface HeatmapValue {
-        userId: string
-        completionDate: string
-        completedTasks: number
-    }
-
-    interface Completion {
-        id: number
-        name: string
-        frequency: string
-        duration: string
-    }
-
-    interface Habit {
-        id: string
-        title: string
-        count: number
-        completions: Completion[]
-    }
+    const currentYear = new Date().getUTCFullYear()
+    const currentMonth = new Date().getUTCMonth()
+    const { start: initialWeekStart, end: initialWeekEnd } = getWeekRange()
 
     const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null)
     const [habits, setHabits] = useState<Habit[]>([])
@@ -52,26 +79,16 @@ const Progress: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'weekly' | 'monthly'>('weekly')
     const [year, setYear] = useState(currentYear)
     const [month, setMonth] = useState(currentMonth)
-    const [weekStartDate, setWeekStartDate] = useState(startOfWeekUTC)
-    const [weekEndDate, setWeekEndDate] = useState(endOfWeekUTC)
+    const [weekStartDate, setWeekStartDate] = useState(initialWeekStart)
+    const [weekEndDate, setWeekEndDate] = useState(initialWeekEnd)
     const [heatmapData, setHeatmapData] = useState<HeatmapValue[]>([])
-
-    // get first and last days of the selected month
-    const firstDayOfMonth = new Date(Date.UTC(year, month, 1))
-    const lastDayOfMonth = new Date(Date.UTC(year, month + 1, 0))
-
-    // to ensure the heatmap starts at the correct day
-    const startDate = new Date(firstDayOfMonth)
-    startDate.setUTCDate(firstDayOfMonth.getUTCDate() - 1)
 
     // fetch heatmap data
     const fetchHeatmapData = async () => {
-        console.log('Fetching heatmap data...')
         try {
             const response = await fetch('/api/heatmap')
             if (response.ok) {
                 const data = await response.json()
-                console.log('Fetched heatmap data:', data.data)
                 setHeatmapData(data.data)
             } else {
                 console.error('Error fetching heatmap data')
@@ -81,14 +98,18 @@ const Progress: React.FC = () => {
         }
     }
 
-    useEffect(() => {
-        console.log('useEffect for heatmap working...')
-        fetchHeatmapData()
-    }, [])
+    // Fetch completed habit data from the database
+    const fetchHabits = async () => {
+        const res = await fetch('/api/progress')
+        const data = await res.json()
+        setHabits(data)
+        setLoading(false)
+    }
 
     useEffect(() => {
-        console.log('Updated heatmapData:', heatmapData)
-    }, [heatmapData])
+        fetchHabits()
+        fetchHeatmapData()
+    }, [])
 
     // Handle previous month navigation
     const handlePrev = () => {
@@ -138,18 +159,6 @@ const Progress: React.FC = () => {
         setSelectedHabit(habit)
     }
 
-    // Fetch completed habit data from the database
-    useEffect(() => {
-        const fetchData = async () => {
-            const res = await fetch('/api/progress')
-            const data = await res.json()
-            setHabits(data)
-            setLoading(false)
-        }
-
-        fetchData()
-    }, [])
-
     if (selectedHabit) {
         return (
             <HabitCompletions
@@ -160,9 +169,7 @@ const Progress: React.FC = () => {
         )
     }
 
-    console.log('Heatmap Data before passing:', heatmapData)
-    console.log('Start Date:', weekStartDate)
-    console.log('End Date:', weekEndDate)
+    const { startDate, endDate } = getMonthRange(year, month)
 
     return (
         <div className="min-h-screen flex flex-col pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full pt-4 md:pt-8 ">
@@ -195,7 +202,8 @@ const Progress: React.FC = () => {
                             Monthly
                         </TabsTrigger>
                     </TabsList>
-                    {/* Heatmap for each tab */}
+
+                    {/* Heatmap */}
                     <div className="flex flex-col items-center justify-center neutral-700 rounded-[6px] border">
                         <div className="flex items-center justify-center mb-2.5 mt-6">
                             <Button
@@ -214,121 +222,45 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={weekStartDate}
                                             endDate={weekEndDate}
-                                            values={heatmapData.map(
-                                                (entry) => ({
-                                                    ...entry,
-                                                    date: entry.completionDate,
-                                                })
-                                            )}
+                                            values={heatmapData.map((d) => ({
+                                                ...d,
+                                                date: d.completionDate,
+                                            }))}
                                             horizontal={false}
                                             gutterSize={6}
-                                            classForValue={(value) => {
-                                                if (!value)
-                                                    return 'color-scale-0'
-                                                const count = Number(
-                                                    value.completedTasks
-                                                )
-                                                if (count === 0)
-                                                    return 'color-scale-0'
-                                                if (count === 1)
-                                                    return 'color-scale-1'
-                                                if (count >= 2 && count < 4)
-                                                    return 'color-scale-2'
-                                                return 'color-scale-3'
-                                            }}
-                                            tooltipDataAttrs={(
-                                                value: {
-                                                    completionDate: string
-                                                    completedTasks: number
-                                                } | null
-                                            ) =>
-                                                value && value.completionDate
-                                                    ? {
-                                                          'data-tooltip-id':
-                                                              'heatmap-tooltip',
-                                                          'data-tooltip-content': `${new Date(
-                                                              value.completionDate
-                                                          )
-                                                              .toISOString()
-                                                              .slice(
-                                                                  0,
-                                                                  10
-                                                              )} has count: ${Number(value.completedTasks)}`,
-                                                      }
-                                                    : {}
-                                            }
+                                            classForValue={getClassForValue}
+                                            tooltipDataAttrs={getTooltipAttrs}
                                             showMonthLabels={false}
                                             showWeekdayLabels={false}
-                                            transformDayElement={(rect) => {
-                                                return React.cloneElement(
-                                                    rect,
-                                                    {
-                                                        rx: 2,
-                                                        ry: 2,
-                                                    }
-                                                )
-                                            }}
+                                            transformDayElement={(rect) =>
+                                                React.cloneElement(rect, {
+                                                    rx: 2,
+                                                    ry: 2,
+                                                })
+                                            }
                                         />
                                     </TabsContent>
                                     {/* Monthly heatmap */}
                                     <TabsContent value="monthly">
                                         <CalendarHeatmap
                                             startDate={startDate}
-                                            endDate={lastDayOfMonth}
-                                            values={heatmapData.map(
-                                                (entry) => ({
-                                                    ...entry,
-                                                    date: entry.completionDate,
-                                                })
-                                            )}
+                                            endDate={endDate}
+                                            values={heatmapData.map((d) => ({
+                                                ...d,
+                                                date: d.completionDate,
+                                            }))}
                                             horizontal={false}
                                             gutterSize={6}
-                                            classForValue={(value) => {
-                                                if (!value)
-                                                    return 'color-scale-0'
-                                                const count = Number(
-                                                    value.completedTasks
-                                                )
-                                                if (count === 0)
-                                                    return 'color-scale-0'
-                                                if (count === 1)
-                                                    return 'color-scale-1'
-                                                if (count >= 2 && count < 4)
-                                                    return 'color-scale-2'
-                                                return 'color-scale-3'
-                                            }}
-                                            tooltipDataAttrs={(
-                                                value: {
-                                                    completionDate: string
-                                                    completedTasks: number
-                                                } | null
-                                            ) =>
-                                                value && value.completionDate
-                                                    ? {
-                                                          'data-tooltip-id':
-                                                              'heatmap-tooltip',
-                                                          'data-tooltip-content': `${new Date(
-                                                              value.completionDate
-                                                          )
-                                                              .toISOString()
-                                                              .slice(
-                                                                  0,
-                                                                  10
-                                                              )} has count: ${Number(value.completedTasks)}`,
-                                                      }
-                                                    : {}
-                                            }
+                                            classForValue={getClassForValue}
+                                            tooltipDataAttrs={getTooltipAttrs}
                                             showMonthLabels={false}
                                             showWeekdayLabels={false}
-                                            transformDayElement={(rect) => {
-                                                return React.cloneElement(
-                                                    rect,
-                                                    {
-                                                        rx: 2,
-                                                        ry: 2,
-                                                    }
-                                                )
-                                            }}
+                                            transformDayElement={(rect) =>
+                                                React.cloneElement(rect, {
+                                                    rx: 2,
+                                                    ry: 2,
+                                                })
+                                            }
                                         />
                                     </TabsContent>
                                 </div>
@@ -353,11 +285,11 @@ const Progress: React.FC = () => {
                                 disabled={
                                     activeTab === 'monthly'
                                         ? year === currentYear &&
-                                          month === currentMonth // Disable if it's the current month
+                                          month === currentMonth
                                         : weekStartDate.toISOString() ===
-                                              startOfWeekUTC.toISOString() &&
+                                              initialWeekStart.toISOString() &&
                                           weekEndDate.toISOString() ===
-                                              endOfWeekUTC.toISOString() // Disable if it's the current week
+                                              initialWeekEnd.toISOString()
                                 }
                                 className="w-8 h-8 rounded-[12px] bg-neutral-900 text-neutral-50 border-neutral-700 border hover:bg-neutral-50 hover:text-neutral-900 hover:cursor-pointer"
                             >
