@@ -12,23 +12,23 @@ import { ChevronRight, ChevronLeft } from 'lucide-react'
 
 const currentYear = new Date().getUTCFullYear()
 const currentMonth = new Date().getUTCMonth()
-// const currentWeek = new Date().getUTCWeek()
 
 // Calculate the start and end dates of the current week in UTC
 const startOfWeekUTC = new Date()
 startOfWeekUTC.setUTCDate(
     startOfWeekUTC.getUTCDate() - startOfWeekUTC.getUTCDay() - 1
-) // Set to Sunday (start of the week)
-startOfWeekUTC.setUTCHours(0, 0, 0, 0) // Ensure time is set to midnight in UTC
+)
+startOfWeekUTC.setUTCHours(0, 0, 0, 0)
 
 const endOfWeekUTC = new Date(startOfWeekUTC)
-endOfWeekUTC.setUTCDate(startOfWeekUTC.getUTCDate() + 6) // Set to Saturday (end of the week)
-endOfWeekUTC.setUTCHours(23, 59, 59, 999) // Ensure time is set to the end of the day in UTC
+endOfWeekUTC.setUTCDate(startOfWeekUTC.getUTCDate() + 6)
+endOfWeekUTC.setUTCHours(23, 59, 59, 999)
 
 const Progress: React.FC = () => {
     interface HeatmapValue {
-        date: string
-        count: number
+        userId: string
+        completionDate: string
+        completedTasks: number
     }
 
     interface Completion {
@@ -50,7 +50,6 @@ const Progress: React.FC = () => {
     const [loading, setLoading] = useState(true)
 
     const [activeTab, setActiveTab] = useState<'weekly' | 'monthly'>('weekly')
-    // Heatmap: State for the current year, month, and week
     const [year, setYear] = useState(currentYear)
     const [month, setMonth] = useState(currentMonth)
     const [weekStartDate, setWeekStartDate] = useState(startOfWeekUTC)
@@ -64,6 +63,32 @@ const Progress: React.FC = () => {
     // to ensure the heatmap starts at the correct day
     const startDate = new Date(firstDayOfMonth)
     startDate.setUTCDate(firstDayOfMonth.getUTCDate() - 1)
+
+    // fetch heatmap data
+    const fetchHeatmapData = async () => {
+        console.log('Fetching heatmap data...')
+        try {
+            const response = await fetch('/api/heatmap')
+            if (response.ok) {
+                const data = await response.json()
+                console.log('Fetched heatmap data:', data.data)
+                setHeatmapData(data.data)
+            } else {
+                console.error('Error fetching heatmap data')
+            }
+        } catch (error) {
+            console.error('Error fetching heatmap data:', error)
+        }
+    }
+
+    useEffect(() => {
+        console.log('useEffect for heatmap working...')
+        fetchHeatmapData()
+    }, [])
+
+    useEffect(() => {
+        console.log('Updated heatmapData:', heatmapData)
+    }, [heatmapData])
 
     // Handle previous month navigation
     const handlePrev = () => {
@@ -109,21 +134,6 @@ const Progress: React.FC = () => {
         }
     }
 
-    // fetch heatmap data
-    useEffect(() => {
-        const fetchHeatmapData = async () => {
-            try {
-                const res = await fetch('/api/heatmap')
-                if (!res.ok) throw new Error('Failed to fetch heatmap data')
-                const data = await res.json()
-                setHeatmapData(data)
-            } catch (error) {
-                console.error('Error fetching heatmap data:', error)
-            }
-        }
-        fetchHeatmapData()
-    }, [])
-
     const handleSelectHabit = (habit: Habit) => {
         setSelectedHabit(habit)
     }
@@ -149,6 +159,10 @@ const Progress: React.FC = () => {
             />
         )
     }
+
+    console.log('Heatmap Data before passing:', heatmapData)
+    console.log('Start Date:', weekStartDate)
+    console.log('End Date:', weekEndDate)
 
     return (
         <div className="min-h-screen flex flex-col pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full pt-4 md:pt-8 ">
@@ -200,44 +214,46 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={weekStartDate}
                                             endDate={weekEndDate}
-                                            values={heatmapData}
+                                            values={heatmapData.map(
+                                                (entry) => ({
+                                                    ...entry,
+                                                    date: entry.completionDate,
+                                                })
+                                            )}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={(value) => {
-                                                if (
-                                                    !value ||
-                                                    value.count === 0
-                                                ) {
+                                                if (!value)
                                                     return 'color-scale-0'
-                                                } else if (value.count === 1) {
+                                                const count = Number(
+                                                    value.completedTasks
+                                                )
+                                                if (count === 0)
+                                                    return 'color-scale-0'
+                                                if (count === 1)
                                                     return 'color-scale-1'
-                                                } else if (
-                                                    value.count >= 2 &&
-                                                    value.count < 4
-                                                ) {
+                                                if (count >= 2 && count < 4)
                                                     return 'color-scale-2'
-                                                } else {
-                                                    return 'color-scale-3'
-                                                }
+                                                return 'color-scale-3'
                                             }}
                                             tooltipDataAttrs={(
                                                 value: {
-                                                    date: string
-                                                    count: number
+                                                    completionDate: string
+                                                    completedTasks: number
                                                 } | null
                                             ) =>
-                                                value && value.date
+                                                value && value.completionDate
                                                     ? {
                                                           'data-tooltip-id':
                                                               'heatmap-tooltip',
                                                           'data-tooltip-content': `${new Date(
-                                                              value.date
+                                                              value.completionDate
                                                           )
                                                               .toISOString()
                                                               .slice(
                                                                   0,
                                                                   10
-                                                              )} has count: ${value.count}`,
+                                                              )} has count: ${Number(value.completedTasks)}`,
                                                       }
                                                     : {}
                                             }
@@ -259,44 +275,46 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={startDate}
                                             endDate={lastDayOfMonth}
-                                            values={heatmapData}
+                                            values={heatmapData.map(
+                                                (entry) => ({
+                                                    ...entry,
+                                                    date: entry.completionDate,
+                                                })
+                                            )}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={(value) => {
-                                                if (
-                                                    !value ||
-                                                    value.count === 0
-                                                ) {
+                                                if (!value)
                                                     return 'color-scale-0'
-                                                } else if (value.count === 1) {
+                                                const count = Number(
+                                                    value.completedTasks
+                                                )
+                                                if (count === 0)
+                                                    return 'color-scale-0'
+                                                if (count === 1)
                                                     return 'color-scale-1'
-                                                } else if (
-                                                    value.count >= 2 &&
-                                                    value.count < 4
-                                                ) {
+                                                if (count >= 2 && count < 4)
                                                     return 'color-scale-2'
-                                                } else {
-                                                    return 'color-scale-3'
-                                                }
+                                                return 'color-scale-3'
                                             }}
                                             tooltipDataAttrs={(
                                                 value: {
-                                                    date: string
-                                                    count: number
+                                                    completionDate: string
+                                                    completedTasks: number
                                                 } | null
                                             ) =>
-                                                value && value.date
+                                                value && value.completionDate
                                                     ? {
                                                           'data-tooltip-id':
                                                               'heatmap-tooltip',
                                                           'data-tooltip-content': `${new Date(
-                                                              value.date
+                                                              value.completionDate
                                                           )
                                                               .toISOString()
                                                               .slice(
                                                                   0,
                                                                   10
-                                                              )} has count: ${value.count}`,
+                                                              )} has count: ${Number(value.completedTasks)}`,
                                                       }
                                                     : {}
                                             }
