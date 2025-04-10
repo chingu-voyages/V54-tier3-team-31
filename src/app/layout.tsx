@@ -19,6 +19,8 @@ export const metadata: Metadata = {
     description: 'Let your goals flow',
 }
 
+import { AuthProviderWrapper } from '@/components/providers/auth-provider'
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -35,13 +37,15 @@ export default function RootLayout({
                     enableSystem
                     disableTransitionOnChange
                 >
-                    {/* Desktop Navigation */}
-                    <DesktopNav />
-                    {children}
-                    {/* Mobile Navigation Bar - Hidden on desktop */}
-                    <div className="md:hidden">
-                        <NavigationMenu />
-                    </div>
+                    <AuthProviderWrapper>
+                        {/* Desktop Navigation */}
+                        <DesktopNav />
+                        {children}
+                        {/* Mobile Navigation Bar - Hidden on desktop */}
+                        <div className="md:hidden">
+                            <NavigationMenu />
+                        </div>
+                    </AuthProviderWrapper>
                 </ThemeProvider>
             </body>
         </html>
