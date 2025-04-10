@@ -13,12 +13,14 @@ import {
     deleteGoalForUser
 } from '@/app/(protected)/app/actions/goals' // Corrected path
 import { toast } from 'sonner';
+import { usePathname } from "next/navigation";
 
 export function useGoalManagement() {
     const [goals, dispatch] = useReducer(goalReducer, []);
     const { status } = useSession(); // Get session status, removed unused 'session'
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(false); // Add isLoading state
+    const pathname = usePathname();
 
     const refreshGoals = useCallback(async () => {
         if (status === 'loading') return;
@@ -69,6 +71,7 @@ export function useGoalManagement() {
                  dispatch({
                      type: 'added',
                      values,
+                     isInFocus: pathname === "/focus"
                     // goalId: tempId // Removed goalId as it's likely not expected by reducer
                 });
                 // Reducer handles localForage update

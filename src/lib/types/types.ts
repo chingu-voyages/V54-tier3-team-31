@@ -36,7 +36,7 @@ export type GoalAction =
           type: 'deleted'
           id: number
       }
-    | { type: 'added'; values: GoalFormValues }
+    | { type: 'added'; values: GoalFormValues, isInFocus?: boolean }
     | { type: 'initial'; goals: GoalWithTasks[] }
     | { type: 'edited'; values: GoalFormValues; id: number }
     | { type: 'TOGGLE_TASK_FOCUS_IN_GOAL'; goalId: number; taskId: number; isInFocus: boolean }

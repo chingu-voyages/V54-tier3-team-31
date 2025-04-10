@@ -165,7 +165,7 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                         goalId: goalId,
                         completed: false,
                         completedAt: null,
-                        isInFocus: false
+                        isInFocus: action.isInFocus ?? false
                     }
                 ],
             }
