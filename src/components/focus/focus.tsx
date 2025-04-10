@@ -10,9 +10,19 @@ import {
     toggleTaskFocus,
     cleanupOldFocusTasks,
 } from '@/lib/localforage'
+import { 
+    getFocusTasksForUser,
+    cleanupOldFocusTasks as cleanupOldFocusTasksDb
+} from '@/app/(protected)/app/actions/focus'
+import { 
+    updateTaskCompletionForUser,
+    toggleTaskFocusForUser
+} from '@/app/(protected)/app/actions/tasks'
+import { useSession } from 'next-auth/react'
 import type { Task } from '@/lib/db/schema'
 import type { TaskFormValues } from '@/lib/types/types'
 import FocusTask from './focus-task'
+import { toast } from 'sonner'
 import { useForm } from 'react-hook-form'
 import {
     DropdownMenu,
@@ -23,7 +33,7 @@ import {
 import TaskForm from '../plans/task-form'
 import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
-import { GoalFormValues } from '@/lib/types/types'
+import { GoalFormValues } from '@/lib/types/types' // Removed unused GoalWithTasks
 import { TaskGoalProvider } from '@/hooks/useTaskGoalContext'
 import GoalsList from '../plans/goals-list'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,12 +46,15 @@ type TaskWithMeta = Task & {
 }
 
 const Focus: React.FC = () => {
+    const { status } = useSession() // Removed unused 'session'
     const [tasks, setTasks] = useState<TaskWithMeta[]>([])
     const [isAddingPlan, setIsAddingPlan] = useState(false)
+    // Removed unused 'isLoading'
+    // Removed toggleTaskFocus from useTaskManagement as it's handled locally or via server actions directly now
     const { planTasks, addTask, editTask, deleteTask } = useTaskManagement()
     console.log("currently the plantasks", planTasks)
-    const { goals, addGoal, editGoal, deleteGoal, editBestTime } =
-        useGoalManagement()
+    // Removed editBestTime as it's merged into editGoal
+    const { goals, addGoal, editGoal, deleteGoal } = useGoalManagement()
     const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
@@ -53,12 +66,29 @@ const Focus: React.FC = () => {
 
     useEffect(() => {
         const loadTasks = async () => {
-            await cleanupOldFocusTasks()
-            const tasksInFocus = await getTasksInFocus()
-            setTasks(tasksInFocus)
+            // Removed isLoading state update
+            try {
+                if (status === 'authenticated') {
+                    // Use server actions for authenticated users
+                    await cleanupOldFocusTasksDb()
+                    const tasksInFocus = await getFocusTasksForUser()
+                    setTasks(tasksInFocus)
+                } else if (status === 'unauthenticated') {
+                    // Use localForage for anonymous users
+                    await cleanupOldFocusTasks()
+                    const tasksInFocus = await getTasksInFocus()
+                    setTasks(tasksInFocus)
+                }
+            } catch (error) {
+                console.error("Error loading focus tasks:", error)
+                toast.error("Failed to load focus tasks")
+            } 
         }
-        loadTasks()
-    }, [])
+        
+        if (status !== 'loading') {
+            loadTasks()
+        }
+    }, [status])
 
     const handleTaskComplete = async (taskId: number, completed: boolean) => {
         try {
@@ -66,50 +96,74 @@ const Focus: React.FC = () => {
             const task = tasks.find((t) => t.id === taskId)
             if (!task) return
 
+            // Use null instead of undefined for consistency with schema/types
+            const completionDate = completed ? new Date() : null;
+
             // Update local state first for immediate feedback
             setTasks((prev) =>
                 prev.map((t) =>
                     t.id === taskId
-                        ? {
+                        ? ({
                               ...t,
                               completed,
-                              completedAt: completed ? new Date() : null,
-                          }
+                              completedAt: completed ? completionDate : null,
+                          } as TaskWithMeta)
                         : t
                 )
             )
 
-            // Persist to storage
-            await updateTaskCompletion(
-                taskId,
-                completed,
-                task.goalId || undefined
-            )
+            // Persist based on authentication status
+            if (status === 'authenticated') {
+                // Use server action for authenticated users (pass null if completionDate is null)
+                await updateTaskCompletionForUser(taskId, completed, completionDate)
+            } else if (status === 'unauthenticated') {
+                // Use localForage for anonymous users
+                await updateTaskCompletion(
+                    taskId,
+                    completed,
+                    task.goalId || undefined
+                )
+            }
         } catch (error) {
             console.error('Error updating task completion:', error)
+            toast.error("Failed to update task")
             // Revert local state on error
             setTasks((prev) =>
                 prev.map((t) =>
                     t.id === taskId
-                        ? {
+                        ? ({
                               ...t,
                               completed: !completed,
-                              completedAt: completed ? null : new Date(),
-                          }
+                              completedAt: !completed ? (t.completedAt ?? null) : null,
+                          } as TaskWithMeta)
                         : t
                 )
             )
         }
     }
 
-    const handleAddTask = async (values: TaskFormValues) => {
-        try {
-            // Add the task and get its ID
-            const newTaskId = addTask(values)
-            // Set it to be in focus
-            await toggleTaskFocus(newTaskId, true)
-            // Refresh the focus tasks list
-            const updatedTasks = await getTasksInFocus()
+     // Handler for adding PLAN tasks (tasks not associated with a goal)
+     const handleAddPlanTask = async (values: TaskFormValues) => {
+         try {
+             // Add the task using the hook (which handles auth status)
+             const newTaskId = await addTask(values) // This adds a PLAN task
+
+             if (newTaskId === undefined) {
+                 toast.error("Failed to add task, cannot set focus.")
+                 return;
+             }
+
+             // Set it to be in focus using the appropriate method based on auth status
+             if (status === 'authenticated') {
+                 await toggleTaskFocusForUser(newTaskId, true);
+             } else if (status === 'unauthenticated') {
+                 await toggleTaskFocus(newTaskId, true); // Use localforage toggle for focus
+             }
+
+             // Refresh the focus tasks list after adding a plan task
+             const updatedTasks = status === 'authenticated'
+                ? await getFocusTasksForUser()
+                : await getTasksInFocus(); // Fetch combined focus tasks
             setTasks(updatedTasks)
             setIsAddingPlan(false)
         } catch (error) {
@@ -123,10 +177,46 @@ const Focus: React.FC = () => {
             bestTimeTitle: 'Your Best time',
             bestTimeDescription: 'And your description',
         }
-        addGoal(values)
-    }
+         addGoal(values)
+     }
 
-    // Handler for frequency change
+     // Handler for adding tasks TO A GOAL (adjusting goalId type for prop compatibility)
+     const handleAddTaskToGoal = async (values: TaskFormValues, goalId?: number) => {
+        if (goalId === undefined) {
+             toast.error("Cannot add task: Goal ID is missing.");
+             console.error("handleAddTaskToGoal called without a goalId.");
+             return;
+         }
+        try {
+            // Use the hook's addTask, providing the goalId
+            const newTaskId = await addTask(values, goalId); // addTask handles auth status
+
+            if (newTaskId === undefined) {
+                toast.error("Failed to add task to goal.");
+                return;
+            }
+
+            // Set the new task to be in focus
+             if (status === 'authenticated') {
+                 await toggleTaskFocusForUser(newTaskId, true);
+             } else if (status === 'unauthenticated') {
+                 await toggleTaskFocus(newTaskId, true); // Use localforage toggle for focus
+             }
+
+            // Refresh the focus list
+            const updatedTasks = status === 'authenticated'
+               ? await getFocusTasksForUser()
+               : await getTasksInFocus();
+           setTasks(updatedTasks)
+           // No need to setIsAddingPlan(false) here as this is triggered from GoalsList
+
+        } catch (error) {
+            console.error('Error adding task to goal:', error);
+            toast.error(`Failed to add task to goal: ${error instanceof Error ? error.message : String(error)}`);
+        }
+     }
+
+     // Handler for frequency change
     const handleFrequencyChange = async (
         taskId: number,
         newFrequency: string
@@ -242,20 +332,22 @@ const Focus: React.FC = () => {
             // Revert local state on error
             setTasks((prev) => prev.map((t) => (t.id === taskId ? task : t)))
         }
-    }
+     }
 
-    const handleEditGoal = (id: number, newName: string) => {
-        editGoal(id, newName)
-    }
+     const handleEditGoal = (id: number, newName: string) => {
+         // Pass name update as a partial object
+         editGoal(id, { name: newName })
+     }
 
-    const handleEditBestTime = (
+     const handleEditBestTime = (
         id: number,
         updates: { bestTimeTitle?: string; bestTimeDescription?: string }
     ) => {
-        editBestTime(id, updates)
-    }
+         // Use editGoal for best time updates
+         editGoal(id, updates)
+     }
 
-    const handleDeleteGoal = (id: number) => {
+     const handleDeleteGoal = (id: number) => {
         deleteGoal(id)
     }
 
@@ -335,13 +427,13 @@ const Focus: React.FC = () => {
 
                     {/* Focus Tasks Section */}
                     <div>
-                        {/* Task Form - shown when adding a new task */}
-                        {isAddingPlan && (
-                            <TaskForm
-                                onAddTask={handleAddTask}
-                                onCancel={() => setIsAddingPlan(false)}
-                            />
-                        )}
+                         {/* Task Form for adding PLAN tasks */}
+                         {isAddingPlan && (
+                             <TaskForm
+                                 onAddTask={handleAddPlanTask} // Use specific handler
+                                 onCancel={() => setIsAddingPlan(false)}
+                             />
+                         )}
 
                         <div className="space-y-8">
                             {!focusTasks.every((e) => e === null) && (
@@ -379,13 +471,13 @@ const Focus: React.FC = () => {
                             goals={goalsWithTasksInFocus}
                             form={form}
                             onDeleteGoal={handleDeleteGoal}
-                            onDeleteTask={handleDeleteTask}
-                            onEditTask={handleEditTask}
-                            onEditGoal={handleEditGoal}
-                            onEditBestTime={handleEditBestTime}
-                            onAddTask={handleAddTask}
-                            useCheckbox={true}
-                            onTaskComplete={handleTaskComplete}
+                             onDeleteTask={handleDeleteTask}
+                             onEditTask={handleEditTask}
+                             onEditGoal={handleEditGoal}
+                             onEditBestTime={handleEditBestTime} // Still uses the wrapper function
+                             onAddTask={handleAddTaskToGoal} // Pass the goal-specific add handler
+                             useCheckbox={true}
+                             onTaskComplete={handleTaskComplete}
                         />
                     </div>
                 </div>

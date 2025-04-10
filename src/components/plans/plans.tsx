@@ -21,7 +21,7 @@ const Plans: React.FC = () => {
 
     // Use our custom hook for task management
     const { planTasks, addTask, editTask, deleteTask } = useTaskManagement()
-    const { goals, addGoal, deleteGoal, editGoal, editBestTime } = useGoalManagement()
+    const { goals, addGoal, deleteGoal, editGoal } = useGoalManagement()
 
     // Form setup for editing tasks
     const taskForm = useForm<typeof TaskFormSchema._type>({
@@ -91,8 +91,8 @@ const Plans: React.FC = () => {
                             onDeleteGoal={deleteGoal}
                             onDeleteTask={deleteTask}
                             onEditTask={editTask}
-                            onEditGoal={editGoal}
-                            onEditBestTime={editBestTime}
+                            onEditGoal={(id, newName) => editGoal(id, { name: newName })}
+                            onEditBestTime={editGoal}
                             onAddTask={handleAddTask}
                         />
 

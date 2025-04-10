@@ -20,10 +20,13 @@ import {
     DURATION_OPTIONS,
 } from '@/lib/constants/taskOptions'
 import { useTaskGoalContext } from '@/hooks/useTaskGoalContext'
-import { toggleTaskFocus } from '@/lib/localforage'
+// Renamed import and added updateTaskCompletion
+import { toggleTaskFocus as toggleTaskFocusLocal, updateTaskCompletion as updateTaskCompletionLocal } from '@/lib/localforage'
 import { Checkbox } from '../ui/checkbox'
 import { simplifyTask } from '@/app/(protected)/app/actions'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
+import { toggleTaskFocusForUser, updateTaskCompletionForUser } from '@/app/(protected)/app/actions/tasks'
 
 interface TaskProps {
     id: number
@@ -62,6 +65,7 @@ const Task: React.FC<TaskProps> = ({
     onTaskComplete,
     completed = false,
 }) => {
+    const { status } = useSession() // Get session status, removed unused 'session'
     const [isEditing, setIsEditing] = useState(false)
     const [localIsInFocus, setLocalIsInFocus] = useState(propIsInFocus)
     const [isChecked, setIsChecked] = useState(completed)
@@ -175,25 +179,66 @@ const Task: React.FC<TaskProps> = ({
         }
     }
 
-    // Handle star button click
-    const handleStarClick = async (e: React.MouseEvent) => {
-        e.stopPropagation() // Prevent triggering the edit mode
-        try {
-            // Update local state immediately for instant feedback
-            setLocalIsInFocus(!localIsInFocus)
-            await toggleTaskFocus(id, !localIsInFocus)
-        } catch (error) {
-            // Revert local state if there's an error
-            setLocalIsInFocus(localIsInFocus)
-            console.error('Error toggling task focus:', error)
-        }
-    }
+    // Handle star button click (Updated based on prompt example)
+     const handleStarClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newFocusState = !localIsInFocus;
+        // Optimistic UI update
+        setLocalIsInFocus(newFocusState);
 
-    // Handle checkbox change
-    const handleCheckboxChange = async (checked: boolean) => {
-        setIsChecked(checked)
-        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
-    }
+        try {
+            if (status === 'authenticated') {
+                await toggleTaskFocusForUser(id, newFocusState);
+                // Optionally refresh focus list if needed, or rely on revalidation
+            } else if (status === 'unauthenticated') {
+                // Pass goalId to local version if needed by its implementation
+                await toggleTaskFocusLocal(id, newFocusState); // Assuming goalId is not needed based on localforage.ts content
+            } else {
+                toast.info("Waiting for session status...");
+                // Revert optimistic update if status is loading
+                setLocalIsInFocus(!newFocusState);
+                return;
+            }
+        } catch (error) {
+            // Revert UI on error
+            setLocalIsInFocus(!newFocusState);
+            console.error('Error toggling task focus:', error);
+            toast.error(`Failed to update task focus: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+
+    // Handle checkbox change (Updated based on prompt example)
+     const handleCheckboxChange = async (checked: boolean | 'indeterminate') => {
+         if (typeof checked !== 'boolean') return; // Handle indeterminate if necessary
+
+         const completionDate = checked ? new Date() : undefined; // Use undefined for null date
+         // Optimistic UI update
+         setIsChecked(checked);
+
+         try {
+             if (status === 'authenticated') {
+                 await updateTaskCompletionForUser(id, checked, completionDate ?? null); // Pass null if undefined
+                 // Call prop for potential parent state updates (like in Focus component)
+                 onTaskComplete?.(id, checked, completionDate);
+                 // Rely on revalidation or manually refresh lists if needed
+             } else if (status === 'unauthenticated') {
+                 // Use the imported local forage function directly
+                 await updateTaskCompletionLocal(id, checked, goalId); // Update localForage
+                 // Call prop for parent state updates
+                 onTaskComplete?.(id, checked, completionDate);
+             } else {
+                 toast.info("Waiting for session status...");
+                 // Revert optimistic update if status is loading
+                 setIsChecked(!checked);
+                 return;
+             }
+         } catch (error) {
+             // Revert UI on error
+             setIsChecked(!checked);
+             console.error('Error updating task completion:', error);
+             toast.error(`Failed to update task completion: ${error instanceof Error ? error.message : String(error)}`);
+         }
+     };
 
     // Handle task simplification
     const handleSimplifyTask = async () => {
