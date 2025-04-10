@@ -3,19 +3,17 @@
 import type React from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '../ui/button'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
-    getTasksInFocus,
     // updateTaskCompletion, // Removed unused import
     // toggleTaskFocus, // Removed unused import
     cleanupOldFocusTasks,
 } from '@/lib/localforage'
 import {
-    getFocusTasksForUser,
+    // getFocusTasksForUser, // REMOVE
     cleanupOldFocusTasks as cleanupOldFocusTasksDb
 } from '@/app/(protected)/app/actions/focus'
 import { 
-    updateTaskCompletionForUser,
     toggleTaskFocusForUser
 } from '@/app/(protected)/app/actions/tasks'
 import { useSession } from 'next-auth/react'
@@ -47,9 +45,8 @@ type TaskWithMeta = Task & {
 
 const Focus: React.FC = () => {
     const { status } = useSession() // Removed unused 'session'
-    const [tasks, setTasks] = useState<TaskWithMeta[]>([])
+    // const [tasks, setTasks] = useState<TaskWithMeta[]>([]) // REMOVE local state
     const [isAddingPlan, setIsAddingPlan] = useState(false)
-    // Removed unused 'isLoading'
 
     // Get refreshGoals from useGoalManagement first
     const { goals, addGoal, editGoal, deleteGoal, refreshGoals } = useGoalManagement()
@@ -67,108 +64,83 @@ const Focus: React.FC = () => {
         },
     })
 
+    // --- Derive focused tasks from hooks --- START
+    const focusedTasks = useMemo(() => {
+        // Combine plan tasks and tasks within goals
+        const allTasks: TaskWithMeta[] = [
+            ...planTasks.map(t => ({ ...t, completedAt: t.completedAt ? new Date(t.completedAt) : null })),
+            ...goals.flatMap(goal => 
+                goal.tasks.map(t => ({ ...t, completedAt: t.completedAt ? new Date(t.completedAt) : null }))
+            )
+        ];
+        // Filter for tasks that are marked as in focus
+        return allTasks.filter(task => task.isInFocus);
+    }, [planTasks, goals]); // Recalculate when planTasks or goals change
+    // --- Derive focused tasks from hooks --- END
+
     useEffect(() => {
-        const loadTasks = async () => {
-            // Removed isLoading state update
+        const loadAndCleanup = async () => {
             try {
                 if (status === 'authenticated') {
-                    // Use server actions for authenticated users
                     await cleanupOldFocusTasksDb()
-                    const tasksInFocus = await getFocusTasksForUser()
-                    setTasks(tasksInFocus)
+                    // No longer need to fetch and set local state here
+                    // const tasksInFocus = await getFocusTasksForUser()
+                    // setTasks(tasksInFocus)
                 } else if (status === 'unauthenticated') {
-                    // Use localForage for anonymous users
                     await cleanupOldFocusTasks()
-                    const tasksInFocus = await getTasksInFocus()
-                    setTasks(tasksInFocus)
+                    // No longer need to fetch and set local state here
+                    // const tasksInFocus = await getTasksInFocus()
+                    // setTasks(tasksInFocus)
                 }
+                 // Hooks should handle their own initial data loading
             } catch (error) {
-                console.error("Error loading focus tasks:", error)
-                toast.error("Failed to load focus tasks")
+                console.error("Error during initial cleanup:", error)
+                toast.error("Failed to cleanup tasks")
             } 
         }
         
         if (status !== 'loading') {
-            loadTasks()
+            loadAndCleanup()
         }
-    }, [status])
+    }, [status]) // Dependency remains status
 
     const handleTaskComplete = async (taskId: number, completed: boolean) => {
-        try {
-            // Find the task to get its goalId
-            const task = tasks.find((t) => t.id === taskId)
-            if (!task) return
-
-            // Use null instead of undefined for consistency with schema/types
-            const completionDate = completed ? new Date() : null;
-
-            // Update local state first for immediate feedback
-            setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId
-                        ? ({
-                              ...t,
-                              completed,
-                              completedAt: completed ? completionDate : null,
-                          } as TaskWithMeta)
-                        : t
-                )
-            )
-
-            // Persist based on authentication status
-            if (status === 'authenticated') {
-                // Use server action for authenticated users (pass null if completionDate is null)
-                await updateTaskCompletionForUser(taskId, completed, completionDate)
-            } else if (status === 'unauthenticated') {
-            // Use localForage for anonymous users via the hook
-            await updateTaskCompletion(taskId, completed, task.goalId || undefined)
-            }
-        } catch (error) {
-            console.error('Error updating task completion:', error)
-            toast.error("Failed to update task")
-            // Revert local state on error
-            setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId
-                        ? ({
-                              ...t,
-                              completed: !completed,
-                              completedAt: !completed ? (t.completedAt ?? null) : null,
-                          } as TaskWithMeta)
-                        : t
-                )
-            )
+        const task = [...planTasks, ...goals.flatMap(g => g.tasks)].find(t => t.id === taskId);
+        if (!task) {
+            console.error("Task not found for completion update:", taskId);
+            toast.error("Failed to update task: Not found.");
+            return;
         }
-    }
+        try {
+            await updateTaskCompletion(taskId, completed, task.goalId || undefined);
+        } catch (error) {
+            console.error('Error updating task completion:', error);
+            toast.error("Failed to update task completion status.");
+        }
+    };
 
      // Handler for adding PLAN tasks (tasks not associated with a goal)
      const handleAddPlanTask = async (values: TaskFormValues) => {
          try {
-             // Add the task using the hook (which handles auth status)
-             const newTaskId = await addTask(values) // This adds a PLAN task
-
+             const newTaskId = await addTask(values) 
              if (newTaskId === undefined) {
                  toast.error("Failed to add task, cannot set focus.")
                  return;
              }
-
-             // Set it to be in focus using the appropriate method based on auth status
              if (status === 'authenticated') {
                  await toggleTaskFocusForUser(newTaskId, true);
              } else if (status === 'unauthenticated') {
-                 // Use the hook's toggleTaskFocus which handles localforage
-                 await toggleTaskFocus(newTaskId, false, undefined); // Pass currentFocusState (false initially) and goalId (undefined for plan task)
+                 await toggleTaskFocus(newTaskId, false, undefined); 
              }
-
-             // Refresh the focus tasks list after adding a plan task
-             const updatedTasks = status === 'authenticated'
-                ? await getFocusTasksForUser()
-                : await getTasksInFocus(); // Fetch combined focus tasks
-            setTasks(updatedTasks)
-            setIsAddingPlan(false)
-        } catch (error) {
-            console.error('Error adding task to focus:', error)
-        }
+             // REMOVE state refresh logic - hooks update state, component re-renders
+             // const updatedTasks = status === 'authenticated'
+             //    ? await getFocusTasksForUser()
+             //    : await getTasksInFocus();
+             // setTasks(updatedTasks)
+             setIsAddingPlan(false)
+         } catch (error) {
+             console.error('Error adding task to focus:', error)
+         }
     }
 
     const handleAddGoal = () => {
@@ -188,29 +160,21 @@ const Focus: React.FC = () => {
              return;
          }
         try {
-            // Use the hook's addTask, providing the goalId
-            const newTaskId = await addTask(values, goalId); // addTask handles auth status
-
+            const newTaskId = await addTask(values, goalId); 
             if (newTaskId === undefined) {
                 toast.error("Failed to add task to goal.");
                 return;
             }
-
-            // Set the new task to be in focus
-             if (status === 'authenticated') {
-                 await toggleTaskFocusForUser(newTaskId, true);
-             } else if (status === 'unauthenticated') {
-                 // Use the hook's toggleTaskFocus which handles localforage
-                 await toggleTaskFocus(newTaskId, false, goalId); // Pass currentFocusState (false initially) and goalId
-             }
-
-            // Refresh the focus list
-            const updatedTasks = status === 'authenticated'
-               ? await getFocusTasksForUser()
-               : await getTasksInFocus();
-           setTasks(updatedTasks)
-           // No need to setIsAddingPlan(false) here as this is triggered from GoalsList
-
+            if (status === 'authenticated') {
+                await toggleTaskFocusForUser(newTaskId, true);
+            } else if (status === 'unauthenticated') {
+                await toggleTaskFocus(newTaskId, false, goalId); 
+            }
+            // REMOVE state refresh logic
+            // const updatedTasks = status === 'authenticated'
+            //    ? await getFocusTasksForUser()
+            //    : await getTasksInFocus();
+            // setTasks(updatedTasks)
         } catch (error) {
             console.error('Error adding task to goal:', error);
             toast.error(`Failed to add task to goal: ${error instanceof Error ? error.message : String(error)}`);
@@ -218,120 +182,92 @@ const Focus: React.FC = () => {
      }
 
      // Handler for frequency change
-    const handleFrequencyChange = async (
-        taskId: number,
-        newFrequency: string
-    ) => {
-        // Find the task to get its goalId
-        const task = tasks.find((t) => t.id === taskId)
-        if (!task) return
-
-        // Update local state first for immediate feedback
-        setTasks((prev) =>
-            prev.map((t) =>
-                t.id === taskId ? { ...t, frequency: newFrequency } : t
-            )
-        )
-
+    const handleFrequencyChange = async (taskId: number, newFrequency: string) => {
+        // Find task in combined hook state
+        const task = [...planTasks, ...goals.flatMap(g => g.tasks)].find(t => t.id === taskId);
+        if (!task) {
+             console.error('Task not found for frequency update:', taskId);
+             toast.error("Failed to update frequency: Task not found.");
+             return;
+        }
+        // REMOVE local state update
+        // setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, frequency: newFrequency } : t))
         try {
-            // Persist to storage
             await editTask(
                 taskId,
-                {
-                    title: task.title,
-                    frequency: newFrequency,
-                    duration: task.duration || '5 mins',
-                },
+                { title: task.title, frequency: newFrequency, duration: task.duration || '5 mins' },
                 task.goalId || undefined
             )
         } catch (error) {
             console.error('Error updating task frequency:', error)
-            // Revert local state on error
-            setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId
-                        ? { ...t, frequency: task.frequency || 'Once' }
-                        : t
-                )
-            )
+            toast.error('Failed to update task frequency.');
+            // No need to revert local state
         }
     }
 
     // Handler for duration change
-    const handleDurationChange = async (
-        taskId: number,
-        newDuration: string
-    ) => {
-        // Find the task to get its goalId
-        const task = tasks.find((t) => t.id === taskId)
-        if (!task) return
-
-        // Update local state first for immediate feedback
-        setTasks((prev) =>
-            prev.map((t) =>
-                t.id === taskId ? { ...t, duration: newDuration } : t
-            )
-        )
-
+    const handleDurationChange = async (taskId: number, newDuration: string) => {
+        // Find task in combined hook state
+        const task = [...planTasks, ...goals.flatMap(g => g.tasks)].find(t => t.id === taskId);
+        if (!task) {
+             console.error('Task not found for duration update:', taskId);
+             toast.error("Failed to update duration: Task not found.");
+             return;
+        }
+        // REMOVE local state update
+        // setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, duration: newDuration } : t))
         try {
-            // Persist to storage
             await editTask(
                 taskId,
-                {
-                    title: task.title,
-                    frequency: task.frequency || 'Once',
-                    duration: newDuration,
-                },
+                { title: task.title, frequency: task.frequency || 'Once', duration: newDuration },
                 task.goalId || undefined
             )
         } catch (error) {
             console.error('Error updating task duration:', error)
-            // Revert local state on error
-            setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId
-                        ? { ...t, duration: task.duration || '5 mins' }
-                        : t
-                )
-            )
+            toast.error('Failed to update task duration.');
+             // No need to revert local state
         }
     }
 
     // Handler for task deletion
     const handleDeleteTask = async (taskId: number) => {
-        const task = tasks.find((t) => t.id === taskId)
-        if (!task) return
-
+        // Find task in combined hook state
+        const task = [...planTasks, ...goals.flatMap(g => g.tasks)].find(t => t.id === taskId);
+        if (!task) { 
+            console.error('Task not found for deletion:', taskId);
+            toast.error("Failed to delete task: Task not found.");
+            return; 
+        }
+        // REMOVE local state update
+        // setTasks((prev) => prev.filter((t) => t.id !== taskId))
         try {
-            // Update local state first
-            setTasks((prev) => prev.filter((t) => t.id !== taskId))
-
-            // Persist to storage
+            // Pass goalId to the hook's deleteTask function
             await deleteTask(taskId, task.goalId || undefined)
         } catch (error) {
             console.error('Error deleting task:', error)
-            // Revert local state on error
-            setTasks((prev) => [...prev, task])
+            toast.error('Failed to delete task.');
+             // No need to revert local state
         }
     }
 
     // Handler for task editing
     const handleEditTask = async (taskId: number, values: TaskFormValues) => {
-        const task = tasks.find((t) => t.id === taskId)
-        if (!task) return
-
+         // Find task in combined hook state
+        const task = [...planTasks, ...goals.flatMap(g => g.tasks)].find(t => t.id === taskId);
+        if (!task) { 
+            console.error('Task not found for editing:', taskId);
+            toast.error("Failed to edit task: Task not found.");
+            return; 
+        }
+        // REMOVE local state update
+        // setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...values } : t)))
         try {
-            // Update local state first
-            setTasks((prev) =>
-                prev.map((t) => (t.id === taskId ? { ...t, ...values } : t))
-            )
-
-            // Persist to storage
+             // Pass goalId to the hook's editTask function
             await editTask(taskId, values, task.goalId || undefined)
         } catch (error) {
             console.error('Error editing task:', error)
-            // Revert local state on error
-            setTasks((prev) => prev.map((t) => (t.id === taskId ? task : t)))
+            toast.error('Failed to edit task.');
+            // No need to revert local state
         }
      }
 
@@ -371,26 +307,30 @@ const Focus: React.FC = () => {
     const goalsWithTasksInFocus = goals.map((goal) => ({
         ...goal,
         tasks: goal.tasks.filter((task) => task.isInFocus && task.goalId),
-    }))
+    })).filter(goal => goal.tasks.length > 0); // Also filter out goals with no focused tasks
 
-    const focusTasks = planTasks.map((task) =>
-        task.isInFocus ? (
+    // --- Update Rendering --- START
+    // Map over the derived focusedTasks that are NOT associated with a goal (plan tasks)
+    const focusedPlanTasksToRender = focusedTasks
+        .filter(task => !task.goalId) // Filter for plan tasks (no goalId)
+        .map((task) => (
             <FocusTask
                 key={task.id}
-                id={task.id}
-                title={task.title}
-                frequency={task.frequency || 'Once'}
-                duration={task.duration || '5 mins'}
-                completed={task.completed || false}
-                form={form}
+                {...task}
+                // Ensure correct props are passed, provide defaults
+                frequency={task.frequency ?? 'Once'}
+                duration={task.duration ?? '5 mins'}
+                completed={task.completed ?? false}
+                form={form} // Pass the form down
+                // Pass down the refactored handlers
                 onTaskComplete={handleTaskComplete}
                 onFrequencyChange={handleFrequencyChange}
                 onDurationChange={handleDurationChange}
                 onDeleteTask={handleDeleteTask}
                 onEditTask={handleEditTask}
             />
-        ) : null
-    )
+        ));
+    // --- Update Rendering --- END
 
     return (
         // Pass refreshGoals to the provider
@@ -432,54 +372,53 @@ const Focus: React.FC = () => {
                          {/* Task Form for adding PLAN tasks */}
                          {isAddingPlan && (
                              <TaskForm
-                                 onAddTask={handleAddPlanTask} // Use specific handler
+                                 onAddTask={handleAddPlanTask} 
                                  onCancel={() => setIsAddingPlan(false)}
                              />
                          )}
 
                         <div className="space-y-8">
-                            {!focusTasks.every((e) => e === null) && (
+                            {/* Render focused PLAN tasks if any */} 
+                            {focusedPlanTasksToRender.length > 0 && (
                                 <div key={nanoid()} className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-xl font-medium">
                                             Plans
                                         </h2>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-zinc-400 h-8 w-8 p-0"
-                                        >
+                                        {/* Optional: Button can remain or be removed */}
+                                        <Button variant="ghost" size="icon" className="text-zinc-400 h-8 w-8 p-0">
                                             <MoreHorizontal className="h-5 w-5" />
                                         </Button>
                                     </div>
                                     <div className="space-y-4">
-                                        {focusTasks}
+                                        {/* Render the mapped components */} 
+                                        {focusedPlanTasksToRender}
                                     </div>
                                 </div>
                             )}
-                            {goalsWithTasksInFocus.length === 0 &&
-                                focusTasks.every((e) => e === null) && (
+                            {/* Conditionally render 'No tasks' message */} 
+                            {focusedPlanTasksToRender.length === 0 && goalsWithTasksInFocus.length === 0 && (
                                     <p className="text-zinc-400 text-sm">
-                                        No tasks in focus. Click the star icon
-                                        on tasks to add them here.
+                                        No tasks in focus. Click the star icon on tasks to add them here.
                                     </p>
-                                )}
+                            )}
                         </div>
                     </div>
 
-                    {/* Goals Section */}
+                    {/* Goals Section - Pass goalsWithTasksInFocus to GoalsList */}
                     <div className="mb-6">
                         <GoalsList
-                            goals={goalsWithTasksInFocus}
+                            goals={goalsWithTasksInFocus} // Pass the filtered goals
                             form={form}
                             onDeleteGoal={handleDeleteGoal}
-                             onDeleteTask={handleDeleteTask}
-                             onEditTask={handleEditTask}
-                             onEditGoal={handleEditGoal}
-                             onEditBestTime={handleEditBestTime} // Still uses the wrapper function
-                             onAddTask={handleAddTaskToGoal} // Pass the goal-specific add handler
-                             useCheckbox={true}
-                             onTaskComplete={handleTaskComplete}
+                            onDeleteTask={handleDeleteTask} // Pass the main delete handler
+                            onEditTask={handleEditTask} // Pass the main edit handler
+                            onEditGoal={handleEditGoal}
+                            onEditBestTime={handleEditBestTime}
+                            onAddTask={handleAddTaskToGoal} 
+                            useCheckbox={true}
+                            onTaskComplete={handleTaskComplete} // Pass the main complete handler
+                            // Add onToggleFocus if needed by GoalsList for its tasks
                         />
                     </div>
                 </div>

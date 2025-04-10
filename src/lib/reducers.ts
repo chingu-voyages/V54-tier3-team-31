@@ -106,6 +106,21 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
 
             return updatedState;
         }
+        case 'COMPLETION_UPDATED': { // Handle optimistic update for task completion
+            return state.map((t) => {
+                if (t.id === action.id) {
+                    return {
+                        ...t,
+                        completed: action.completed,
+                        completedAt: action.completedAt,
+                    };
+                }
+                return t;
+            });
+             // Note: Persistence (localForage update) is handled by the hook (`useTaskManagement`)
+             // calling `updateTaskCompletionLocal` for unauthenticated users.
+             // Reducer only handles the optimistic state update.
+        }
         default:
             throw new Error('Unknown action')
     }

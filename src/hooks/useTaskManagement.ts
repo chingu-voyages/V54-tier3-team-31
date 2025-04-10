@@ -248,43 +248,70 @@ export function useTaskManagement(
          }
      };
 
-     // Function to update task completion
-     const updateTaskCompletion = async (taskId: number, completed: boolean, goalId?: number) => {
-         if (status === 'loading') {
-             toast.info("Waiting for session status...");
-             return;
-         }
-         const completionDate = completed ? new Date() : null;
-         try {
-             if (status === 'authenticated') {
-                 await updateTaskCompletionForUser(taskId, completed, completionDate);
-                 // Revalidation handles UI updates in Focus/Plans/Progress pages
-                 // Trigger callbacks if needed for immediate UI feedback in parent components
+    // Function to update task completion status
+    const updateTaskCompletion = async (taskId: number, completed: boolean, goalId?: number) => {
+        if (status === 'loading') {
+            toast.info("Waiting for session status...");
+            return;
+        }
+
+        const originalTask = planTasks.find(t => t.id === taskId);
+        const originalCompleted = originalTask?.completed ?? !completed; // Best guess for revert
+        const originalCompletedAt = originalTask?.completedAt ?? null;
+
+        // --- Optimistic UI Update (for unauthenticated) --- 
+        if (status === 'unauthenticated') {
+             if (!goalId) { // Only dispatch for plan tasks optimistically
+                 dispatch({ 
+                    type: 'COMPLETION_UPDATED', 
+                    id: taskId, 
+                    completed, 
+                    completedAt: completed ? new Date() : null 
+                });
+             }
+        }
+
+        try {
+            if (status === 'authenticated') {
+                await updateTaskCompletionForUser(taskId, completed, completed ? new Date() : null);
+                // Trigger appropriate refresh/callback
+                if (goalId && onTaskInGoalUpdated) {
+                    await onTaskInGoalUpdated();
+                } else if (!goalId) {
+                    await refreshTasks(); // Refresh plan tasks if a plan task was updated
+                }
+            } else if (status === 'unauthenticated') {
+                // Perform local storage update
+                await updateTaskCompletionLocal(taskId, completed); 
+                // Trigger goal callback if needed (state update already happened optimistically for plan tasks)
                  if (goalId && onTaskInGoalUpdated) {
                      await onTaskInGoalUpdated();
-                 } else {
-                     // Refresh plan tasks if completion affects the main list directly (optional)
-                     // await refreshTasks();
                  }
-             } else if (status === 'unauthenticated') {
-                 await updateTaskCompletionLocal(taskId, completed, goalId);
-                  // Update local state (planTaskReducer might need 'updated_completion' action)
-                  if (goalId && onTaskInGoalUpdated) {
-                      await onTaskInGoalUpdated();
-                  }
-                  // Removed dispatch for 'updated_completion' as it's not in the reducer
-                  // else {
-                  //      dispatch({ type: 'updated_completion', id: taskId, completed, completedAt: completionDate });
-                  // }
-              }
-              toast.success(`Task marked as ${completed ? 'complete' : 'incomplete'}.`);
-         } catch (error) {
-             console.error('Error updating task completion:', error);
-             toast.error(`Failed to update task completion: ${error instanceof Error ? error.message : String(error)}`);
-             // Revert optimistic UI update here if implemented in the component
-         }
-     };
-
+            }
+            // toast.success("Task completion updated!"); // Optional success message
+        } catch (error) {
+            console.error('Error updating task completion:', error);
+            toast.error(`Failed to update task completion: ${error instanceof Error ? error.message : String(error)}`);
+            
+            // --- Revert Optimistic Update on Error (for unauthenticated plan tasks) --- 
+            if (status === 'unauthenticated' && !goalId) {
+                dispatch({ 
+                    type: 'COMPLETION_UPDATED', 
+                    id: taskId, 
+                    completed: originalCompleted, // Revert to original state
+                    completedAt: originalCompletedAt 
+                });
+                 // Attempt to revert local storage as well
+                 try {
+                    await updateTaskCompletionLocal(taskId, originalCompleted);
+                 } catch (revertError) {
+                     console.error('Error reverting local task completion:', revertError);
+                     // Potentially notify user that local storage might be inconsistent
+                 }
+            }
+            // Note: No state revert needed for authenticated, relies on refresh/revalidation
+        }
+    };
 
     return {
         planTasks: isInitialized ? planTasks : [], // Return empty array until initialized
