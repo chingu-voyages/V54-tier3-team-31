@@ -14,12 +14,7 @@ import { GoalWithTasks } from "@/lib/types/types";
 import { revalidatePath } from "next/cache";
 
 const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-  throw new Error("GEMINI_API_KEY environment variable is not set.");
-}
-
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = new GoogleGenerativeAI(apiKey || '');
 
 type GeminiResponseSchema = GoalWithTasks[];
 
@@ -88,6 +83,9 @@ const generationConfig: GenerationConfig = {
 };
 
 export async function generateGoalsFromInput(userInput: string): Promise<GeminiResponseSchema> {
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is not set.");
+  }
   try {
     const chatSession = model.startChat({
       generationConfig,

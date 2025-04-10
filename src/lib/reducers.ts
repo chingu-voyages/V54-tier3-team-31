@@ -31,7 +31,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
             const newTask: TaskSchema = {
                 ...action.values,
                 userId: nanoid(), // Keep nanoid for userId if it's suitable there
-                id: action.taskId || Date.now(), // Use the provided taskId
+                id: action.taskId || parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16), // Use the provided taskId or generate a unique numeric ID
                 difficulty: null,
                 description: null,
                 createdAt: new Date(),
@@ -39,7 +39,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 goalId: action.goalId || null, // Use provided goalId or null
                 completed: false,
                 completedAt: null, // Add the completedAt property
-                isInFocus: action.taskId ? true : false,
+                isInFocus: action.isInFocus, // Default to false for new tasks
             }
             
             // If this task belongs to a goal, don't add it to the main tasks array
@@ -72,17 +72,54 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 return state.filter(t => t.id !== action.id)
             } else {
                 // Update the task in the main tasks array
-                return state.map((t) => {
+                const updatedState = state.map((t) => { // Assign result to updatedState
                     if (t.id === action.id) {
                         return {
                             ...t,
                             ...action.values,
                             completedAt: t.completedAt, // Preserve the completedAt property
-                        }
+                        };
                     }
-                    return t
-                })
+                    return t;
+                });
+                // Save the updated plan tasks state to localForage
+                saveTasksToLocal(updatedState);
+                return updatedState; // Return the updated state
             }
+        }
+        case 'TOGGLED_FOCUS': { // Added case for optimistic focus toggle
+            // Update localForage first for unauthenticated users
+            // Assuming toggleTaskFocusLocal exists and handles the persistence
+            // toggleTaskFocusLocal(action.id, action.isInFocus); // We'll call this from the hook instead to handle auth status
+            
+            const updatedState = state.map((t) => {
+                if (t.id === action.id) {
+                    return { ...t, isInFocus: action.isInFocus };
+                }
+                return t;
+            });
+            // Save updated state to local storage if tasks don't belong to a goal
+            // Note: This assumes saveTasksToLocal filters out goal tasks or handles them appropriately.
+            // Persistence (local storage update) is handled by the hook (`useTaskManagement`) 
+            // calling `toggleTaskFocusLocal` for unauthenticated users.
+            // Reducer only handles the optimistic state update.
+
+            return updatedState;
+        }
+        case 'COMPLETION_UPDATED': { // Handle optimistic update for task completion
+            return state.map((t) => {
+                if (t.id === action.id) {
+                    return {
+                        ...t,
+                        completed: action.completed,
+                        completedAt: action.completedAt,
+                    };
+                }
+                return t;
+            });
+             // Note: Persistence (localForage update) is handled by the hook (`useTaskManagement`)
+             // calling `updateTaskCompletionLocal` for unauthenticated users.
+             // Reducer only handles the optimistic state update.
         }
         default:
             throw new Error('Unknown action')
@@ -100,9 +137,11 @@ export function goalReducer(state: GoalState, action: GoalAction) {
         }
 
         case 'added': {
+            // Generate a unique number ID using crypto.randomUUID()
+            const goalId = parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16);
             const newGoal: GoalWithTasks = {
                 ...action.values,
-                id: Date.now(),
+                id: goalId,
                 description: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -110,11 +149,11 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                 endDate: new Date(),
                 frequency: null,
                 userId: nanoid(),
-                bestTimeTitle: action.values.bestTimeTitle ?? null, // Ensure null is used
+                bestTimeTitle: action.values.bestTimeTitle ?? null,
                 bestTimeDescription: action.values.bestTimeDescription ?? null,
                 tasks: [
                     {
-                        id: Date.now(),
+                        id: parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 8), 16),
                         title: 'Your Goal Here',
                         difficulty: null,
                         description: null,
@@ -123,12 +162,12 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                         frequency: 'Once',
                         duration: '5 mins',
                         userId: nanoid(),
-                        goalId: null,
+                        goalId: goalId,
                         completed: false,
                         completedAt: null,
-                        isInFocus: false
+                        isInFocus: action.isInFocus ?? false
                     }
-                ], // Add an empty tasks array to conform to GoalWithTasks
+                ],
             }
             const nextGoal = [...state, newGoal]
             saveGoalsToLocal(nextGoal)
@@ -138,7 +177,7 @@ export function goalReducer(state: GoalState, action: GoalAction) {
 
         case 'edited': {
             // Update the goal with the values from the action
-            return state.map(goal => {
+            const updatedGoals = state.map(goal => { // Assign result to updatedGoals
                 if (goal.id === action.id) {
                     return {
                         ...goal,
@@ -148,6 +187,29 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                 }
                 return goal;
             });
+            // Save the updated goals state to localForage
+            saveGoalsToLocal(updatedGoals);
+            return updatedGoals; // Return the updated state
+        }
+        case 'TOGGLE_TASK_FOCUS_IN_GOAL': { // Added action to toggle task focus within a goal
+            const updatedGoalsState = state.map(goal => {
+                if (goal.id === action.goalId) {
+                    const updatedTasks = goal.tasks.map(task => {
+                        if (task.id === action.taskId) {
+                            return { ...task, isInFocus: action.isInFocus };
+                        }
+                        return task;
+                    });
+                    return { ...goal, tasks: updatedTasks };
+                }
+                return goal;
+            });
+            // Persistence (local storage) for goal tasks' focus state needs to be handled carefully.
+            // If toggleTaskFocusLocal can handle tasks within goals, the hook will call it.
+            // If not, we might need to update saveGoalsToLocal or have a specific function.
+            // For now, reducer only handles optimistic state update.
+            // saveGoalsToLocal(updatedGoalsState); // Avoid saving from reducer
+            return updatedGoalsState;
         }
         default:
             throw new Error('Unknown action')

@@ -1,23 +1,33 @@
 'use client'
 
-import type React from 'react'
-import { useEffect, useState, useRef, KeyboardEvent } from 'react'
-import type { UseFormReturn } from 'react-hook-form'
-import type { TaskFormValues } from '@/lib/types/types'
-import { Checkbox } from '../ui/checkbox'
-import { Button } from '../ui/button'
+import React, { useState, useRef, KeyboardEvent } from "react";
+import type { UseFormReturn } from 'react-hook-form';
+import type { TaskFormValues } from '@/lib/types/types';
+import { simplifyTask } from "@/app/(protected)/app/actions";
+import { toast } from 'sonner';
+import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions';
+
+// UI Components
+import { Button } from "../ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import ActionDropdown from "@/components/ui/action-dropdown";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormMessage
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '../ui/dropdown-menu'
-import { FREQUENCY_OPTIONS, DURATION_OPTIONS } from '@/lib/constants/taskOptions'
-import { WandSparkles, Trash } from 'lucide-react'
-import ActionDropdown from '../ui/action-dropdown'
-import { Form } from '@/components/ui/form'
-import { FormField, FormItem, FormControl, FormMessage } from '../ui/form'
-import { Input } from '../ui/input'
+} from '../ui/dropdown-menu';
+
+// Icons
+import { Trash } from "lucide-react";
 
 interface FocusTaskProps {
     id: number
@@ -43,7 +53,7 @@ const FocusTask: React.FC<FocusTaskProps> = ({
     title,
     frequency,
     duration,
-    completed: initialCompleted,
+    completed,
     onTaskComplete,
     onFrequencyChange,
     onDurationChange,
@@ -51,17 +61,29 @@ const FocusTask: React.FC<FocusTaskProps> = ({
     onEditTask,
     form,
 }) => {
-    const [isChecked, setIsChecked] = useState(initialCompleted)
+    const [isChecked, setIsChecked] = useState(completed)
     const [isEditing, setIsEditing] = useState(false)
     const formRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        setIsChecked(initialCompleted)
-    }, [initialCompleted])
+    // State for simplification feature
+    const [isSimplifying, setIsSimplifying] = useState(false)
+    const [simplifiedTaskSuggestion, setSimplifiedTaskSuggestion] = useState<string | null>(null)
+    const [showSimplificationConfirmation, setShowSimplificationConfirmation] = useState(false)
+    const [simplifyError, setSimplifyError] = useState<string | null>(null)
 
     const handleCheckboxChange = async (checked: boolean) => {
-        setIsChecked(checked)
-        onTaskComplete?.(id, checked, checked ? new Date() : undefined)
+        // Optimistic UI update
+        setIsChecked(checked);
+
+        try {
+            // Call parent handler
+            onTaskComplete?.(id, checked, checked ? new Date() : undefined);
+        } catch (error) {
+            // Revert UI on error
+            setIsChecked(!checked);
+            console.error('Error updating task completion:', error);
+            // Consider adding a toast message here
+        }
     }
 
     const handleFrequencyChange = (newFrequency: string) => {
@@ -114,6 +136,112 @@ const FocusTask: React.FC<FocusTaskProps> = ({
             onEditTask(taskId, values)
         }
     }
+
+    // --- Simplification Handlers (copied from Task.tsx) ---
+    const handleSimplifyTask = async () => {
+        setIsSimplifying(true);
+        setSimplifyError(null);
+        
+        try {
+            const simplifiedTask = await simplifyTask(title);
+            setSimplifiedTaskSuggestion(simplifiedTask.title);
+            setShowSimplificationConfirmation(true);
+        } catch (error) {
+            console.error('Error simplifying task:', error);
+            setSimplifyError(error instanceof Error ? error.message : 'Unknown error');
+        } finally {
+            setIsSimplifying(false);
+        }
+    };
+
+    const handleAcceptSimplifiedTask = async () => {
+        if (!simplifiedTaskSuggestion) return
+        try {
+            const updatedValues = {
+                title: simplifiedTaskSuggestion,
+                frequency: frequency || 'Once',
+                duration: duration || '5 mins',
+            }
+            await handleTaskEdit(id, updatedValues) // Use the existing edit handler
+            toast.success('Task updated with simplified version!')
+        } catch (error) {
+            console.error('Error applying simplified task:', error)
+            toast.error('Failed to update task. Please try again.')
+        } finally {
+            setSimplifiedTaskSuggestion(null)
+            setShowSimplificationConfirmation(false)
+        }
+    }
+
+    const handleRetrySimplifyTask = async () => {
+        setSimplifiedTaskSuggestion(null)
+        setShowSimplificationConfirmation(false)
+        await handleSimplifyTask()
+    }
+
+    const handleCancelSimplifiedTask = () => {
+        setSimplifiedTaskSuggestion(null)
+        setShowSimplificationConfirmation(false)
+    }
+    // --- End Simplification Handlers ---
+
+    // Render simplification elements if in focus and while simplifying
+    const renderSimplificationElements = () => {
+        if (isSimplifying) {
+            return (
+                <div className="ml-2 flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2" />
+                    <span className="text-sm text-blue-700">Simplifying...</span>
+                </div>
+            );
+        }
+
+        if (showSimplificationConfirmation) {
+            return (
+                <div className="relative flex flex-col ml-2 p-2 border border-gray-200 rounded-md bg-white shadow-sm">
+                    <p className="text-sm font-medium mb-2">Simplified suggestion:</p>
+                    <p className="text-sm italic mb-2">{simplifiedTaskSuggestion}</p>
+                    <div className="flex space-x-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={handleAcceptSimplifiedTask}
+                        >
+                            Apply
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={handleRetrySimplifyTask}
+                            disabled={isSimplifying}
+                        >
+                            Try Again
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex items-center gap-1 absolute top-0 right-0"
+                            onClick={handleCancelSimplifiedTask}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (simplifyError) {
+            return (
+                <div className="ml-2 text-sm text-red-500">
+                    Error: {simplifyError}
+                </div>
+            );
+        }
+
+        return null;
+    };
 
     return (
         <div className="mb-4">
@@ -317,15 +445,9 @@ const FocusTask: React.FC<FocusTaskProps> = ({
                             </DropdownMenu>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                className="flex items-center gap-1 whitespace-nowrap"
-                            >
-                                <div className="w-4 h-4 text-primary">
-                                    <WandSparkles size={16} />
-                                </div>
-                                <div>Simpler</div>
-                            </Button>
+                            {/* --- Simplification UI (copied/adapted from Task.tsx) --- */}
+                            {renderSimplificationElements()}
+                            {/* --- End Simplification UI --- */}
                             <ActionDropdown iconSize={16}>
                                 <DropdownMenuItem
                                     className="text-destructive"
