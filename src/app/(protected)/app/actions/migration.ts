@@ -39,9 +39,10 @@ export async function migrateLocalDataToDb(localData: LocalData) {
             goalId: null, // Ensure goalId is null for plan tasks
             isInFocus: task.isInFocus ?? false,
             completed: task.completed ?? false,
-            completedAt: task.completedAt,
-            createdAt: task.createdAt || new Date(), // Use existing or new date
-            updatedAt: new Date(),
+            // Parse date strings back to Date objects, handle null/undefined
+            completedAt: task.completedAt ? new Date(task.completedAt) : null,
+            createdAt: task.createdAt ? new Date(task.createdAt) : new Date(), // Use existing or new date
+            updatedAt: new Date(), // Always set to now
         }));
         // Insert tasks, ignoring conflicts (e.g., if migration runs twice)
         await db.insert(tasks).values(tasksToInsert).onConflictDoNothing();
@@ -72,12 +73,13 @@ export async function migrateLocalDataToDb(localData: LocalData) {
                  description: localGoal.description,
                  bestTimeTitle: localGoal.bestTimeTitle,
                  bestTimeDescription: localGoal.bestTimeDescription,
-                 startDate: localGoal.startDate || new Date(),
-                 endDate: localGoal.endDate,
+                 // Parse date strings back to Date objects, handle null/undefined
+                 startDate: localGoal.startDate ? new Date(localGoal.startDate) : new Date(), // Default to now if null/undefined
+                 endDate: localGoal.endDate ? new Date(localGoal.endDate) : null,
                  frequency: localGoal.frequency,
                  userId: userId,
-                 createdAt: localGoal.createdAt || new Date(),
-                 updatedAt: new Date(),
+                 createdAt: localGoal.createdAt ? new Date(localGoal.createdAt) : new Date(), // Use existing or new date
+                 updatedAt: new Date(), // Always set to now
                  // id: undefined, // Let DB generate ID
              }).returning({ id: goals.id });
              newGoalId = newGoal.id;
@@ -99,9 +101,10 @@ export async function migrateLocalDataToDb(localData: LocalData) {
                  goalId: newGoalId, // Link to the migrated/existing goal ID
                  isInFocus: task.isInFocus ?? false,
                  completed: task.completed ?? false,
-                 completedAt: task.completedAt,
-                 createdAt: task.createdAt || new Date(),
-                 updatedAt: new Date(),
+                 // Parse date strings back to Date objects, handle null/undefined
+                 completedAt: task.completedAt ? new Date(task.completedAt) : null,
+                 createdAt: task.createdAt ? new Date(task.createdAt) : new Date(), // Use existing or new date
+                 updatedAt: new Date(), // Always set to now
              }));
              // Insert tasks, ignoring conflicts
              await db.insert(tasks).values(goalTasksToInsert).onConflictDoNothing();

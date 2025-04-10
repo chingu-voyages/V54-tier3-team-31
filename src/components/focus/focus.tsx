@@ -6,11 +6,11 @@ import { Button } from '../ui/button'
 import { useEffect, useState } from 'react'
 import {
     getTasksInFocus,
-    updateTaskCompletion,
-    toggleTaskFocus,
+    // updateTaskCompletion, // Removed unused import
+    // toggleTaskFocus, // Removed unused import
     cleanupOldFocusTasks,
 } from '@/lib/localforage'
-import { 
+import {
     getFocusTasksForUser,
     cleanupOldFocusTasks as cleanupOldFocusTasksDb
 } from '@/app/(protected)/app/actions/focus'
@@ -50,11 +50,15 @@ const Focus: React.FC = () => {
     const [tasks, setTasks] = useState<TaskWithMeta[]>([])
     const [isAddingPlan, setIsAddingPlan] = useState(false)
     // Removed unused 'isLoading'
-    // Removed toggleTaskFocus from useTaskManagement as it's handled locally or via server actions directly now
-    const { planTasks, addTask, editTask, deleteTask } = useTaskManagement()
+
+    // Get refreshGoals from useGoalManagement first
+    const { goals, addGoal, editGoal, deleteGoal, refreshGoals } = useGoalManagement()
+
+    // Pass refreshGoals to useTaskManagement
+    // Removed toggleTaskFocus, updateTaskCompletion from destructuring as they are now part of the hook's return value
+    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus, updateTaskCompletion } = useTaskManagement(refreshGoals)
+
     console.log("currently the plantasks", planTasks)
-    // Removed editBestTime as it's merged into editGoal
-    const { goals, addGoal, editGoal, deleteGoal } = useGoalManagement()
     const form = useForm<TaskFormValues>({
         resolver: zodResolver(TaskFormSchema),
         defaultValues: {
@@ -117,12 +121,8 @@ const Focus: React.FC = () => {
                 // Use server action for authenticated users (pass null if completionDate is null)
                 await updateTaskCompletionForUser(taskId, completed, completionDate)
             } else if (status === 'unauthenticated') {
-                // Use localForage for anonymous users
-                await updateTaskCompletion(
-                    taskId,
-                    completed,
-                    task.goalId || undefined
-                )
+            // Use localForage for anonymous users via the hook
+            await updateTaskCompletion(taskId, completed, task.goalId || undefined)
             }
         } catch (error) {
             console.error('Error updating task completion:', error)
@@ -157,7 +157,8 @@ const Focus: React.FC = () => {
              if (status === 'authenticated') {
                  await toggleTaskFocusForUser(newTaskId, true);
              } else if (status === 'unauthenticated') {
-                 await toggleTaskFocus(newTaskId, true); // Use localforage toggle for focus
+                 // Use the hook's toggleTaskFocus which handles localforage
+                 await toggleTaskFocus(newTaskId, false, undefined); // Pass currentFocusState (false initially) and goalId (undefined for plan task)
              }
 
              // Refresh the focus tasks list after adding a plan task
@@ -200,7 +201,8 @@ const Focus: React.FC = () => {
              if (status === 'authenticated') {
                  await toggleTaskFocusForUser(newTaskId, true);
              } else if (status === 'unauthenticated') {
-                 await toggleTaskFocus(newTaskId, true); // Use localforage toggle for focus
+                 // Use the hook's toggleTaskFocus which handles localforage
+                 await toggleTaskFocus(newTaskId, false, goalId); // Pass currentFocusState (false initially) and goalId
              }
 
             // Refresh the focus list
@@ -392,7 +394,8 @@ const Focus: React.FC = () => {
     )
 
     return (
-        <TaskGoalProvider>
+        // Pass refreshGoals to the provider
+        <TaskGoalProvider refreshGoalsCallback={refreshGoals}>
             <div className="min-h-screen flex flex-col text-white">
                 <div className="flex flex-col flex-1 px-4 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full">
                     {/* Header */}

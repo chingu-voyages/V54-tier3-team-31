@@ -6,6 +6,13 @@ import Plans from '../../../src/components/plans/plans';
 import '@testing-library/jest-dom/vitest';
 import { TaskFormValues } from '@/lib/types/types';
 import { useTaskManagement } from '@/hooks/useTaskManagement';
+import { useGoalManagement } from '@/hooks/useGoalManagement'; // Import useGoalManagement
+
+// Mock next-auth/react
+vi.mock('next-auth/react', () => ({
+    useSession: vi.fn(() => ({ status: 'unauthenticated', data: null })), // Default mock
+    SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Mock localForage
 vi.mock('localforage', () => ({
@@ -20,10 +27,22 @@ vi.mock('localforage', () => ({
     }
 }));
 
-// Mock the custom hook
+// Mock the custom hooks
 vi.mock('@/hooks/useTaskManagement', () => ({
     useTaskManagement: vi.fn()
 }));
+vi.mock('@/hooks/useGoalManagement', () => ({ // Add mock for useGoalManagement
+    useGoalManagement: vi.fn()
+}));
+vi.mock('@/hooks/useTaskGoalContext', () => ({ // Add mock for context provider
+    TaskGoalProvider: ({ children }: { children: React.ReactNode }) => children,
+    useTaskGoalContext: vi.fn(() => ({ // Mock the context hook return value if needed
+        updateTaskInGoal: vi.fn(),
+        addTaskToGoal: vi.fn(),
+        removeTaskInGoal: vi.fn(),
+    }))
+}));
+
 
 // Mock nanoid to return predictable IDs for testing
 vi.mock('nanoid', () => ({
@@ -74,14 +93,35 @@ describe('Plans Component', () => {
     const mockAddTask = vi.fn();
     const mockEditTask = vi.fn();
     const mockDeleteTask = vi.fn();
+    const mockToggleTaskFocus = vi.fn(); // Added
+    const mockUpdateTaskCompletion = vi.fn(); // Added
+    const mockRefreshTasks = vi.fn(); // Added
+    const mockAddGoal = vi.fn(); // Added
+    const mockEditGoal = vi.fn(); // Added
+    const mockDeleteGoal = vi.fn(); // Added
+    const mockRefreshGoals = vi.fn(); // Added
 
     beforeEach(() => {
         vi.clearAllMocks();
+        // Update useTaskManagement mock
         (useTaskManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             planTasks: mockPlanTasks,
             addTask: mockAddTask,
             editTask: mockEditTask,
-            deleteTask: mockDeleteTask
+            deleteTask: mockDeleteTask,
+            toggleTaskFocus: mockToggleTaskFocus, // Added
+            updateTaskCompletion: mockUpdateTaskCompletion, // Added
+            refreshTasks: mockRefreshTasks, // Added
+            isInitialized: true // Added
+        });
+        // Add useGoalManagement mock
+        (useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            goals: [], // Start with empty goals for simplicity unless needed
+            addGoal: mockAddGoal,
+            editGoal: mockEditGoal,
+            deleteGoal: mockDeleteGoal,
+            refreshGoals: mockRefreshGoals,
+            isInitialized: true
         });
     });
 

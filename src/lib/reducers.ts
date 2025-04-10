@@ -72,16 +72,19 @@ export function planTaskReducer(state: TaskState, action: TaskAction) {
                 return state.filter(t => t.id !== action.id)
             } else {
                 // Update the task in the main tasks array
-                return state.map((t) => {
+                const updatedState = state.map((t) => { // Assign result to updatedState
                     if (t.id === action.id) {
                         return {
                             ...t,
                             ...action.values,
                             completedAt: t.completedAt, // Preserve the completedAt property
-                        }
+                        };
                     }
-                    return t
-                })
+                    return t;
+                });
+                // Save the updated plan tasks state to localForage
+                saveTasksToLocal(updatedState);
+                return updatedState; // Return the updated state
             }
         }
         default:
@@ -140,7 +143,7 @@ export function goalReducer(state: GoalState, action: GoalAction) {
 
         case 'edited': {
             // Update the goal with the values from the action
-            return state.map(goal => {
+            const updatedGoals = state.map(goal => { // Assign result to updatedGoals
                 if (goal.id === action.id) {
                     return {
                         ...goal,
@@ -150,6 +153,9 @@ export function goalReducer(state: GoalState, action: GoalAction) {
                 }
                 return goal;
             });
+            // Save the updated goals state to localForage
+            saveGoalsToLocal(updatedGoals);
+            return updatedGoals; // Return the updated state
         }
         default:
             throw new Error('Unknown action')

@@ -9,19 +9,22 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { TaskFormSchema } from '@/lib/types/validations'
 import { useTaskManagement } from '@/hooks/useTaskManagement'
 import { useGoalManagement } from '@/hooks/useGoalManagement'
+import { AuthProviderWrapper } from '@/components/providers/auth-provider'
 import TaskForm from './task-form'
 import { GoalFormValues, TaskFormValues, } from '@/lib/types/types'
 import { TaskGoalProvider } from '@/hooks/useTaskGoalContext'
 import TaskList from './task-list'
 import GoalsList from './goals-list'
 
-const Plans: React.FC = () => {
+const PlansContent: React.FC = () => {
     // State to manage the visibility of the add task form
     const [isAddingPlan, setIsAddingPlan] = useState<boolean>(false)
 
-    // Use our custom hook for task management
-    const { planTasks, addTask, editTask, deleteTask } = useTaskManagement()
-    const { goals, addGoal, deleteGoal, editGoal } = useGoalManagement()
+    // Call useGoalManagement first to get refreshGoals
+    const { goals, addGoal, deleteGoal, editGoal, refreshGoals } = useGoalManagement() // Get refreshGoals
+
+    // Use our custom hook for task management, passing the refreshGoals callback
+    const { planTasks, addTask, editTask, deleteTask } = useTaskManagement(refreshGoals)
 
     // Form setup for editing tasks
     const taskForm = useForm<typeof TaskFormSchema._type>({
@@ -53,7 +56,8 @@ const Plans: React.FC = () => {
     }
 
     return (
-        <TaskGoalProvider>
+        // Pass refreshGoals from useGoalManagement to the provider
+        <TaskGoalProvider refreshGoalsCallback={refreshGoals}>
             <div className="min-h-screen flex flex-col">
                 {/* Main container */}
                 <div className="flex flex-col flex-1 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full md:pt-8">
@@ -110,6 +114,15 @@ const Plans: React.FC = () => {
                 </div>
             </div>
         </TaskGoalProvider>
+    )
+}
+
+// Wrapper component that provides the authentication context
+const Plans: React.FC = () => {
+    return (
+        <AuthProviderWrapper>
+            <PlansContent />
+        </AuthProviderWrapper>
     )
 }
 

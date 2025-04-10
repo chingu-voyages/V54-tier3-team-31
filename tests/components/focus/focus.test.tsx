@@ -11,7 +11,13 @@ import type { TaskFormValues } from '@/lib/types/types'
 import type { Task } from '@/lib/db/schema'
 import type { ReactNode } from 'react'
 
-// Mock all required components and hooks
+// Mock next-auth/react
+vi.mock('next-auth/react', () => ({
+    useSession: vi.fn(() => ({ status: 'unauthenticated', data: null })), // Default mock
+    SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock other required components and hooks
 vi.mock('../../../src/hooks/useTaskGoalContext', () => ({
     TaskGoalProvider: ({ children }: { children: ReactNode }) => children
 }))
@@ -191,25 +197,39 @@ describe('Focus Component', () => {
     ]
 
     const mockAddTask = vi.fn().mockReturnValue(3)
-    const mockEditTask = vi.fn()
-    const mockDeleteTask = vi.fn()
-    const mockAddGoal = vi.fn()
+    const mockEditTask = vi.fn();
+    const mockDeleteTask = vi.fn();
+    const mockToggleTaskFocus = vi.fn(); // Added mock
+    const mockUpdateTaskCompletion = vi.fn(); // Added mock
+    const mockRefreshTasks = vi.fn(); // Added mock
+    const mockAddGoal = vi.fn();
+    const mockEditGoal = vi.fn(); // Added mock
+    const mockDeleteGoal = vi.fn(); // Added mock
+    const mockRefreshGoals = vi.fn(); // Added mock
 
     beforeEach(() => {
-        vi.clearAllMocks()
-        ;(useTaskManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+        vi.clearAllMocks();
+        // Update useTaskManagement mock
+        (useTaskManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             planTasks: mockTasks,
             addTask: mockAddTask,
             editTask: mockEditTask,
-            deleteTask: mockDeleteTask
-        })
-        ;(useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            deleteTask: mockDeleteTask,
+            toggleTaskFocus: mockToggleTaskFocus, // Added
+            updateTaskCompletion: mockUpdateTaskCompletion, // Added
+            refreshTasks: mockRefreshTasks, // Added
+            isInitialized: true // Added
+        });
+        // Update useGoalManagement mock
+        (useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             goals: mockGoals,
             addGoal: mockAddGoal,
-            editGoal: vi.fn(),
-            deleteGoal: vi.fn(),
-            editBestTime: vi.fn()
-        })
+            editGoal: mockEditGoal, // Use added mock
+            deleteGoal: mockDeleteGoal, // Use added mock
+            // editBestTime: vi.fn(), // Removed editBestTime
+            refreshGoals: mockRefreshGoals, // Added
+            isInitialized: true // Added
+        });
         // Mock getTasksInFocus to return mockTasks
         vi.mocked(getTasksInFocus).mockResolvedValue(mockTasks)
     })
@@ -235,23 +255,27 @@ describe('Focus Component', () => {
 
     it('displays empty state message when no tasks', () => {
         vi.mocked(getTasksInFocus).mockResolvedValueOnce([])
-        // Mock planTasks to be empty as well
+        // Mock planTasks to be empty as well, include all required fields
         vi.mocked(useTaskManagement).mockReturnValueOnce({
             planTasks: [],
             addTask: mockAddTask,
             editTask: mockEditTask,
             deleteTask: mockDeleteTask,
-            refreshTasks: vi.fn().mockResolvedValue(undefined) // Add refreshTasks mock
-        })
+            toggleTaskFocus: mockToggleTaskFocus,
+            updateTaskCompletion: mockUpdateTaskCompletion,
+            refreshTasks: mockRefreshTasks,
+            isInitialized: true
+        });
 
-        // Mock useGoalManagement to return empty goals
+        // Mock useGoalManagement to return empty goals, include all required fields
         vi.mocked(useGoalManagement).mockReturnValueOnce({
             goals: [],
-            addGoal: vi.fn(),
-            editGoal: vi.fn(),
-            deleteGoal: vi.fn(),
-            editBestTime: vi.fn()
-        })
+            addGoal: mockAddGoal,
+            editGoal: mockEditGoal,
+            deleteGoal: mockDeleteGoal,
+            refreshGoals: mockRefreshGoals,
+            isInitialized: true
+        });
 
         render(<Focus />)
         expect(screen.getByText(/no tasks in focus/i)).toBeInTheDocument()
@@ -319,10 +343,11 @@ describe('Focus Component', () => {
         
         // Find and click the checkbox for Test Task 1
         const checkboxes = screen.getAllByRole('checkbox')
-        await user.click(checkboxes[0])
-        
-        expect(vi.mocked(updateTaskCompletion)).toHaveBeenCalledWith(1, true, undefined)
-    })
+        await user.click(checkboxes[0]);
+
+        // Check if the hook's updateTaskCompletion was called
+        expect(mockUpdateTaskCompletion).toHaveBeenCalledWith(1, true, undefined); // Check the mock function
+    });
 
     it('handles task frequency change', async () => {
         const user = userEvent.setup()
