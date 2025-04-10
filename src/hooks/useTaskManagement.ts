@@ -32,11 +32,11 @@ export function useTaskManagement(
     const { status } = useSession() // Get session status, removed unused 'session'
     const pathname = usePathname()
     const [isInitialized, setIsInitialized] = useState(false);
-
+    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
 
     const refreshTasks = useCallback(async () => {
         if (status === 'loading') return; // Don't do anything while loading
-
+        setIsLoading(true); // Set loading true
         try {
             let tasks: Task[] = [];
             if (status === 'authenticated') {
@@ -60,15 +60,15 @@ export function useTaskManagement(
             console.error("Error refreshing tasks:", error);
             toast.error("Failed to load tasks.");
              setIsInitialized(true); // Mark as initialized even on error to prevent infinite loops
+        } finally {
+            setIsLoading(false); // Set loading false in finally block
         }
     }, [status]); // Depend on session status
 
     useEffect(() => {
         console.log("useTaskManagement useEffect triggered. Status:", status);
-        if (!isInitialized) { // Only refresh initially or when status changes significantly
-             refreshTasks();
-        }
-    }, [status, isInitialized, refreshTasks]);
+        refreshTasks();
+    }, [status, refreshTasks]); // Remove isInitialized from dependencies
 
     const addTask = async (values: z.infer<typeof TaskFormSchema>, goalId?: number) => {
         const isInFocus = pathname === '/focus';
@@ -314,13 +314,14 @@ export function useTaskManagement(
     };
 
     return {
-        planTasks: isInitialized ? planTasks : [], // Return empty array until initialized
+        planTasks, // Return directly
         addTask,
         editTask,
         deleteTask,
-        toggleTaskFocus, // Expose new function
-        updateTaskCompletion, // Expose new function
+        toggleTaskFocus,
+        updateTaskCompletion,
         refreshTasks,
-        isInitialized // Expose initialization status
+        isInitialized,
+        isLoading, // Return isLoading
     }
 }

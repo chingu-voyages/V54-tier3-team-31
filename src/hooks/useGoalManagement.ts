@@ -18,10 +18,11 @@ export function useGoalManagement() {
     const [goals, dispatch] = useReducer(goalReducer, []);
     const { status } = useSession(); // Get session status, removed unused 'session'
     const [isInitialized, setIsInitialized] = useState(false);
+    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
 
     const refreshGoals = useCallback(async () => {
         if (status === 'loading') return;
-
+        setIsLoading(true); // Set loading true
         try {
             let fetchedGoals: GoalWithTasks[] = [];
             if (status === 'authenticated') {
@@ -41,15 +42,18 @@ export function useGoalManagement() {
             console.error("Error refreshing goals:", error);
             toast.error("Failed to load goals.");
              setIsInitialized(true); // Mark as initialized even on error
+        } finally {
+            setIsLoading(false); // Set loading false in finally block
         }
     }, [status]);
 
     useEffect(() => {
          console.log("useGoalManagement useEffect triggered. Status:", status);
-         if (!isInitialized) { // Only refresh initially or when status changes significantly
+         // REMOVE the !isInitialized check to always refresh on mount/status change
+         // if (!isInitialized) { 
             refreshGoals();
-         }
-    }, [status, isInitialized, refreshGoals]);
+         // }
+    }, [status, refreshGoals]); // Remove isInitialized from dependencies
 
     const addGoal = async (values: GoalFormValues) => {
          if (status === 'loading') {
@@ -139,13 +143,13 @@ export function useGoalManagement() {
     };
 
     return {
-        goals: isInitialized ? goals : [], // Return empty array until initialized
+        goals, // Return goals directly
         addGoal,
-        editGoal, // Use combined edit function
-        // editBestTime, // Removed
+        editGoal,
         deleteGoal,
-        refreshGoals, // Expose refresh function if needed externally
-        isInitialized, // Expose initialization status
-        optimisticToggleTaskFocusInGoal // Expose the new function
+        refreshGoals,
+        isInitialized,
+        isLoading, // Return isLoading
+        optimisticToggleTaskFocusInGoal
     }
 }

@@ -239,7 +239,8 @@ describe('Focus Component', () => {
             toggleTaskFocus: mockToggleTaskFocus, // Added
             updateTaskCompletion: mockUpdateTaskCompletion, // Added
             refreshTasks: mockRefreshTasks, // Added
-            isInitialized: true // Added
+            isInitialized: true, // Added
+            isLoading: false // Add isLoading property
         });
         // Update useGoalManagement mock
         (useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -250,6 +251,7 @@ describe('Focus Component', () => {
             // editBestTime: vi.fn(), // Removed editBestTime
             refreshGoals: mockRefreshGoals, // Added
             isInitialized: true,
+            isLoading: false, // Add isLoading property
             optimisticToggleTaskFocusInGoal: vi.fn()
         });
         // Mock getTasksInFocus to return mockTasks
@@ -286,7 +288,8 @@ describe('Focus Component', () => {
             toggleTaskFocus: mockToggleTaskFocus,
             updateTaskCompletion: mockUpdateTaskCompletion,
             refreshTasks: mockRefreshTasks,
-            isInitialized: true
+            isInitialized: true,
+            isLoading: false // Add isLoading property
         });
 
         // Mock useGoalManagement to return empty goals, include all required fields
@@ -297,6 +300,7 @@ describe('Focus Component', () => {
             deleteGoal: mockDeleteGoal,
             refreshGoals: mockRefreshGoals,
             isInitialized: true,
+            isLoading: false, // Add isLoading property
             optimisticToggleTaskFocusInGoal: vi.fn()
         });
 
@@ -470,7 +474,7 @@ describe('Focus Component', () => {
         });
         
         // Mock the hooks to return simple values
-        vi.mocked(useTaskManagement).mockReturnValue({
+        (useTaskManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             planTasks: mockTaskList,
             addTask: vi.fn(),
             editTask: vi.fn(),
@@ -478,16 +482,18 @@ describe('Focus Component', () => {
             toggleTaskFocus: vi.fn(),
             updateTaskCompletion: vi.fn(),
             refreshTasks: vi.fn(),
-            isInitialized: true
+            isInitialized: true,
+            isLoading: false // Add isLoading property
         });
         
-        vi.mocked(useGoalManagement).mockReturnValue({
+        (useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             goals: [],
             addGoal: vi.fn(),
             editGoal: vi.fn(),
             deleteGoal: vi.fn(),
             refreshGoals: vi.fn(),
             isInitialized: true,
+            isLoading: false, // Add isLoading property
             optimisticToggleTaskFocusInGoal: vi.fn()
         });
         
@@ -556,7 +562,7 @@ describe('Focus Component', () => {
         });
         
         // Mock the hooks to return simple values
-        vi.mocked(useTaskManagement).mockReturnValue({
+        (useTaskManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             planTasks: mockTaskList,
             addTask: vi.fn(),
             editTask: vi.fn(),
@@ -564,16 +570,18 @@ describe('Focus Component', () => {
             toggleTaskFocus: vi.fn(),
             updateTaskCompletion: vi.fn(),
             refreshTasks: vi.fn(),
-            isInitialized: true
+            isInitialized: true,
+            isLoading: false // Add isLoading property
         });
         
-        vi.mocked(useGoalManagement).mockReturnValue({
+        (useGoalManagement as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             goals: [],
             addGoal: vi.fn(),
             editGoal: vi.fn(),
             deleteGoal: vi.fn(),
             refreshGoals: vi.fn(),
             isInitialized: true,
+            isLoading: false, // Add isLoading property
             optimisticToggleTaskFocusInGoal: vi.fn()
         });
         

@@ -20,13 +20,11 @@ const PlansContent: React.FC = () => {
     // State to manage the visibility of the add task form
     const [isAddingPlan, setIsAddingPlan] = useState<boolean>(false)
 
-    // Call useGoalManagement first to get refreshGoals
-    const { goals, addGoal, deleteGoal, editGoal, refreshGoals, optimisticToggleTaskFocusInGoal } = useGoalManagement() // Destructure optimistic toggle
-
-    // Use our custom hook for task management, passing the refreshGoals callback AND the optimistic toggle function
-    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus } = useTaskManagement(
+    // Destructure isLoading from hooks
+    const { goals, addGoal, deleteGoal, editGoal, refreshGoals, optimisticToggleTaskFocusInGoal, isLoading: goalsLoading } = useGoalManagement()
+    const { planTasks, addTask, editTask, deleteTask, toggleTaskFocus, isLoading: tasksLoading } = useTaskManagement(
         refreshGoals, 
-        optimisticToggleTaskFocusInGoal // Pass the function here
+        optimisticToggleTaskFocusInGoal 
         )
 
     // Form setup for editing tasks
@@ -56,6 +54,15 @@ const PlansContent: React.FC = () => {
             bestTimeDescription: 'And your description',
         }
         addGoal(values)
+    }
+
+    // Conditional rendering for loading state
+    if (goalsLoading || tasksLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <p>Loading...</p> { /* Simple loading indicator */ }
+            </div>
+        )
     }
 
     return (
