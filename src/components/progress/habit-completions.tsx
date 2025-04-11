@@ -1,6 +1,6 @@
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, CircleCheck, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import FocusTask from '@/components/focus/focus-task'
 
 interface HabitCompletionsProps {
     title: string
@@ -32,39 +32,22 @@ const HabitCompletions: React.FC<HabitCompletionsProps> = ({
             </Button>
             {/* Task details */}
             <h4 className="mt-4 text-xl font-semibold">{title}</h4>
-            <div className="mt-4 w-full space-y-1">
+            <div className="mt-4 w-full space-y-4">
                 {completions.map((completion) => (
-                    <Card
+                    <FocusTask
                         key={completion.id}
-                        className="border-b-[1px] rounded-none mb-2 bg-neutral-900 min-h-[72px] pt-0 pb-3"
-                    >
-                        <div className="w-full">
-                            <div className="flex w-full items-center gap-1.5 text-base text-foreground font-medium">
-                                {/* To do: Clickable to mark it as uncomplete */}
-                                <CircleCheck className="text-background fill-lime-400" />
-                                <div className="self-stretch my-auto text-neutral-100 text-base font-normal">
-                                    {completion.name}
-                                </div>
-                            </div>
-                            <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
-                                <div className="self-stretch flex items-center gap-4 my-auto">
-                                    <div className="self-stretch border border-border bg-background whitespace-nowrap my-auto px-3 py-1 rounded-md border-solid">
-                                        {completion.frequency}
-                                    </div>
-                                    <div className="self-stretch border border-border bg-background -ml-2 whitespace-nowrap my-auto px-3 py-1 rounded-md border-solid">
-                                        {completion.duration}
-                                    </div>
-                                </div>
-                                {/* To do: Delete dropdown */}
-                                <Button
-                                    variant="ghost"
-                                    className="self-stretch flex items-center gap-1 whitespace-nowrap my-auto"
-                                >
-                                    <MoreHorizontal />
-                                </Button>
-                            </div>
-                        </div>
-                    </Card>
+                        id={completion.id}
+                        title={completion.name}
+                        frequency={completion.frequency}
+                        duration={completion.duration}
+                        completed={true}
+                        form={{} as never} // Pass an empty form or adapt as needed
+                        onTaskComplete={() => {}}
+                        onFrequencyChange={() => {}}
+                        onDurationChange={() => {}}
+                        onDeleteTask={() => {}}
+                        onEditTask={() => {}}
+                    />
                 ))}
             </div>
         </div>

@@ -7,6 +7,7 @@ import {
     timestamp,
     boolean,
     primaryKey,
+    date,
 } from 'drizzle-orm/pg-core'
 
 import type { AdapterAccountType } from 'next-auth/adapters'
@@ -149,17 +150,23 @@ export const goalRelations = relations(goals, ({ many, one }) => ({
     tasks: many(tasks),
 }))
 
-
 export const taskRelations = relations(tasks, ({ one }) => ({
     goal: one(goals, {
         fields: [tasks.goalId],
         references: [goals.id],
     }),
-    user: one(users, { // Add relation from task to its user
+    user: one(users, {
+        // Add relation from task to its user
         fields: [tasks.userId],
         references: [users.id],
     }),
 }))
+
+export const heatmapStatisticsView = pgTable('heatmap_statistics', {
+    userId: text('user_id').notNull(),
+    completionDate: date('completion_date').notNull(),
+    completedTasks: text('completed_tasks').notNull(),
+})
 
 // Types
 export type User = typeof users.$inferSelect
@@ -167,4 +174,3 @@ export type Account = typeof accounts.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Goal = typeof goals.$inferSelect
 export type Task = typeof tasks.$inferSelect
-
