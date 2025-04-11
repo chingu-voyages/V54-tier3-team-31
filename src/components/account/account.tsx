@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
+import { signIn, signOut, useSession } from 'next-auth/react'
 
 const Account: React.FC = () => {
     const teamMembers = [
@@ -32,8 +33,8 @@ const Account: React.FC = () => {
             icon: 'sophie-icon.png',
         },
     ]
-
-    const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const { data: session } = useSession()
+    const isLoggedIn = session ? true : false
 
     return (
         <div className="min-h-screen flex flex-col px-[15px] md:px-0 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full pt-4 md:pt-8 ">
@@ -45,7 +46,7 @@ const Account: React.FC = () => {
                         <>
                             <div className="flex items-center gap-3 py-[1.5px]">
                                 <Image
-                                    src="/sophie-icon.png"
+                                    src={session?.user?.image || "/sophie-icon.png"}
                                     alt="Avatar"
                                     width={43}
                                     height={43}
@@ -53,16 +54,16 @@ const Account: React.FC = () => {
                                 />
                                 <div className="flex flex-col gap-0.5 font-medium ">
                                     <p className="text-gray-50 text-sm">
-                                        Jackson Lee
+                                        {session?.user?.name || "User"}
                                     </p>
                                     <p className="text-neutral-400 text-xs">
-                                        jackson.lee@example.com
+                                        {session?.user?.email || ""}
                                     </p>
                                 </div>
                             </div>
                             <Button
                                 className="rounded-[6px] text-neutral-50 font-medium text-sm border-neutral-700 border bg-neutral-900"
-                                onClick={() => setIsLoggedIn(false)} // Set to logged out
+                                onClick={() => signOut()} // Set to logged out
                             >
                                 Logout
                             </Button>
@@ -81,7 +82,7 @@ const Account: React.FC = () => {
                             </p>
                             <Button
                                 className="rounded-[6px] text-zinc-900 font-medium text-sm"
-                                onClick={() => setIsLoggedIn(true)} // Set to logged in
+                                onClick={async () => await signIn('google')} // Set to logged in
                             >
                                 Login with Google
                             </Button>
