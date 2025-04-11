@@ -41,7 +41,7 @@ const HabitCompletions: React.FC<HabitCompletionsProps> = ({
                         frequency={completion.frequency}
                         duration={completion.duration}
                         completed={true}
-                        form={{} as any} // Pass an empty form or adapt as needed
+                        form={{} as never} // Pass an empty form or adapt as needed
                         onTaskComplete={() => {}}
                         onFrequencyChange={() => {}}
                         onDurationChange={() => {}}

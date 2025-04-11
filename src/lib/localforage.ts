@@ -595,3 +595,19 @@ export const cleanupOldFocusTasks = async (): Promise<void> => {
         console.error('Error cleaning up old focus tasks:', error)
     }
 }
+
+export const clearLocalData = async (): Promise<void> => {
+    ensureLocalForageConfigured()
+    if (typeof window === 'undefined') {
+        return
+    }
+    try {
+        // Clear all tasks
+        await localforage.removeItem(PLANS_KEY)
+        // Clear all goals
+        await localforage.removeItem(GOALS_KEY)
+        console.log("LocalForage data cleared.")
+    } catch (err) {
+        console.error('Error clearing data from localForage:', err)
+    }
+}

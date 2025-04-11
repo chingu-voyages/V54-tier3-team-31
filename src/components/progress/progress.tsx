@@ -128,7 +128,7 @@ const Progress: React.FC = () => {
 
                 setHeatmapData(heatmapData)
             } else {
-                const transformedData = data.data.map((item: any) => ({
+                const transformedData = data.data.map((item: { completionDate: string; completedTasks: string }) => ({
                     date: item.completionDate,
                     count: parseInt(item.completedTasks, 10),
                 }))

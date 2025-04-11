@@ -26,7 +26,17 @@ export async function GET() {
                     and(eq(tasks.userId, user_id), eq(tasks.completed, true))
                 )
 
-            const groupedByGoal = completedTasks.reduce<Record<number, any>>(
+            const groupedByGoal = completedTasks.reduce<Record<number, {
+                id: string;
+                title: string;
+                count: number;
+                completions: Array<{
+                    id: number;
+                    name: string;
+                    frequency: string;
+                    duration: string;
+                }>;
+            }>>(
                 (acc, task) => {
                     const goalId = task.goalId ?? 0
                     if (!acc[goalId]) {
