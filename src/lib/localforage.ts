@@ -19,18 +19,33 @@ let localForageConfigured = false
 function ensureLocalForageConfigured() {
     // Ensure this only runs in the browser and only once
     if (typeof window !== 'undefined' && !localForageConfigured) {
-        localforage.config({
-            driver: [
-                localforage.INDEXEDDB,
-                localforage.WEBSQL,
-                localforage.LOCALSTORAGE,
-            ], // Explicitly list drivers in order of preference
-            name: 'myOfflineAppDB',
-            storeName: 'offline_data_store', // Optional: Define a specific store name
-            description: 'Client-side storage for offline application data',
-        })
-        localForageConfigured = true
-        console.log('localForage configured successfully.')
+        try {
+            localforage.config({
+                driver: [
+                    localforage.INDEXEDDB,
+                    localforage.WEBSQL,
+                    localforage.LOCALSTORAGE,
+                ], // Explicitly list drivers in order of preference
+                name: 'myOfflineAppDB',
+                storeName: 'offline_data_store', // Optional: Define a specific store name
+                description: 'Client-side storage for offline application data',
+            })
+            localForageConfigured = true
+            console.log('localForage configured successfully.')
+        } catch (err) {
+            console.error('Error configuring localForage:', err)
+            // If configuration fails, we probably can't use localForage.
+            if (
+                err instanceof Error &&
+                err.message.includes('No available storage method found')
+            ) {
+                console.error(
+                    'LocalForage configuration failed: No suitable storage driver found. Check browser settings/permissions (e.g., private browsing).'
+                )
+            }
+            // Configuration failed, subsequent calls might still fail,
+            // but this prevents the config call itself from causing an unhandled rejection.
+        }
     }
 }
 
@@ -111,11 +126,11 @@ export const removeTaskFromLocal = async ({
                 }
                 return goal
             })
-            
+
             // Save the updated goals back to storage
             await saveGoalsToLocal(updatedGoals)
             console.log(`Task ${taskId} removed from goal ${goalId} successfully.`)
-        }   
+        }
     } catch (err) {
         console.error(`Error removing task ${taskId} from localForage:`, err)
         if (
@@ -285,7 +300,7 @@ export const editGoalInLocal = async (
         console.warn('Attempted to edit goal in localForage on the server.')
         return // Don't run on server
     }
-    
+
     try {
         const allGoals = await getAllGoalsFromLocal()
         const updatedGoals = allGoals.map((goal) => {
@@ -298,7 +313,7 @@ export const editGoalInLocal = async (
             }
             return goal
         })
-        
+
         // Save the updated goals back to storage
         await saveGoalsToLocal(updatedGoals)
         console.log(`Goal ${goalId} updated successfully.`)
@@ -375,10 +390,10 @@ export const toggleTaskFocus = async (taskId: number, isInFocus: boolean): Promi
         // First check if it's a plan task
         const allPlanTasks = await getAllPLanTasksFromLocal()
         const planTaskIndex = allPlanTasks.findIndex(task => task.id === taskId)
-        
+
         if (planTaskIndex !== -1) {
             // Update plan task
-            const updatedTasks = allPlanTasks.map(task => 
+            const updatedTasks = allPlanTasks.map(task =>
                 task.id === taskId ? { ...task, isInFocus } : task
             )
             await saveTasksToLocal(updatedTasks)
@@ -423,43 +438,43 @@ export const getTasksInFocus = async (): Promise<schema.Task[]> => {
     try {
         const planTasks = await getAllPLanTasksFromLocal()
         const goals = await getAllGoalsFromLocal()
-        
+
         // Get current date at midnight for comparison
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        
+
         // Filter plan tasks that are in focus and either not completed or completed today
         const focusPlanTasks = planTasks.filter(task => {
             if (!task.isInFocus) return false
             if (!task.completed) return true
-            
+
             // If task has completedAt timestamp, check if it was completed today
             if (task.completedAt) {
-                const completedDate = task.completedAt instanceof Date 
-                    ? task.completedAt 
+                const completedDate = task.completedAt instanceof Date
+                    ? task.completedAt
                     : new Date(task.completedAt);
-                
+
                 return completedDate >= today
             }
-            
+
             return true
         })
-        
+
         // Filter goal tasks that are in focus and either not completed or completed today
-        const focusGoalTasks = goals.flatMap(goal => 
+        const focusGoalTasks = goals.flatMap(goal =>
             goal.tasks.filter(task => {
                 if (!task.isInFocus) return false
                 if (!task.completed) return true
-                
+
                 // If task has completedAt timestamp, check if it was completed today
                 if (task.completedAt) {
-                    const completedDate = task.completedAt instanceof Date 
-                        ? task.completedAt 
+                    const completedDate = task.completedAt instanceof Date
+                        ? task.completedAt
                         : new Date(task.completedAt);
-                    
+
                     return completedDate >= today
                 }
-                
+
                 return true
             })
         )
@@ -482,7 +497,7 @@ export const updateTaskCompletion = async (
     try {
         // Convert string to Date if provided
         const completedAtDate = completed ? new Date() : null;
-        
+
         if (!goalId) {
             // Update plan task
             const allPlanTasks = await getAllPLanTasksFromLocal()
@@ -532,22 +547,22 @@ export const cleanupOldFocusTasks = async (): Promise<void> => {
         // Get current date at midnight for comparison
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        
+
         // Get yesterday's date
         const yesterday = new Date(today)
         yesterday.setDate(yesterday.getDate() - 1)
-        
+
         // Update plan tasks
         const allPlanTasks = await getAllPLanTasksFromLocal()
         let planTasksUpdated = false
-        
+
         const updatedPlanTasks = allPlanTasks.map(task => {
             // If task is completed and completed more than 24 hours ago, remove from focus
             if (task.completed && task.completedAt) {
-                const completedDate = task.completedAt instanceof Date 
-                    ? task.completedAt 
+                const completedDate = task.completedAt instanceof Date
+                    ? task.completedAt
                     : new Date(task.completedAt);
-                
+
                 if (completedDate < yesterday) {
                     planTasksUpdated = true
                     return { ...task, isInFocus: false }
@@ -555,24 +570,24 @@ export const cleanupOldFocusTasks = async (): Promise<void> => {
             }
             return task
         })
-        
+
         if (planTasksUpdated) {
             await saveTasksToLocal(updatedPlanTasks)
         }
-        
+
         // Update goal tasks
         const goals = await getAllGoalsFromLocal()
         let goalsUpdated = false
-        
+
         const updatedGoals = goals.map(goal => {
             let tasksUpdated = false
             const updatedTasks = goal.tasks.map(task => {
                 // If task is completed and completed more than 24 hours ago, remove from focus
                 if (task.completed && task.completedAt) {
-                    const completedDate = task.completedAt instanceof Date 
-                        ? task.completedAt 
+                    const completedDate = task.completedAt instanceof Date
+                        ? task.completedAt
                         : new Date(task.completedAt);
-                    
+
                     if (completedDate < yesterday) {
                         tasksUpdated = true
                         return { ...task, isInFocus: false }
@@ -580,14 +595,14 @@ export const cleanupOldFocusTasks = async (): Promise<void> => {
                 }
                 return task
             })
-            
+
             if (tasksUpdated) {
                 goalsUpdated = true
                 return { ...goal, tasks: updatedTasks }
             }
             return goal
         })
-        
+
         if (goalsUpdated) {
             await saveGoalsToLocal(updatedGoals)
         }
