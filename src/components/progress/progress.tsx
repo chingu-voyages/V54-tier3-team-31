@@ -12,9 +12,8 @@ import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { getAllGoalsFromLocal } from '@/lib/localforage'
 
 interface HeatmapValue {
-    userId: string
-    completionDate: string
-    completedTasks: number
+    date: string
+    count?: number
 }
 
 interface Completion {
@@ -53,18 +52,20 @@ const getMonthRange = (year: number, month: number) => {
 }
 
 const getClassForValue = (value: HeatmapValue | undefined): string => {
-    const count = Number(value?.completedTasks ?? 0)
+    const count = value?.count ?? 0
     if (count === 0) return 'color-scale-0'
     if (count === 1) return 'color-scale-1'
     if (count >= 2 && count < 4) return 'color-scale-2'
     return 'color-scale-3'
 }
 
-const getTooltipAttrs = (value: HeatmapValue) =>
-    value?.completionDate
+const getTooltipAttrs = (
+    value: HeatmapValue | undefined
+): Record<string, string> =>
+    value?.date
         ? {
               'data-tooltip-id': 'heatmap-tooltip',
-              'data-tooltip-content': `${value.completionDate.slice(0, 10)} has count: ${value.completedTasks}`,
+              'data-tooltip-content': `${value.date} has count: ${value.count}`,
           }
         : {}
 
@@ -101,15 +102,12 @@ const Progress: React.FC = () => {
 
                 localGoals.forEach((goal) => {
                     goal.tasks.forEach((task) => {
-                        console.log('Processing task:', task)
                         if (task.completed && task.completedAt) {
                             const date =
                                 task.completedAt instanceof Date
                                     ? task.completedAt
                                     : new Date(task.completedAt)
-                            if (isNaN(date.getTime())) {
-                                console.error('Invalid date for task:', task)
-                            } else {
+                            if (!isNaN(date.getTime())) {
                                 const formattedDate = date
                                     .toISOString()
                                     .split('T')[0]
@@ -117,24 +115,16 @@ const Progress: React.FC = () => {
                                     (completedTasksByDate[formattedDate] || 0) +
                                     1
                             }
-                        } else {
-                            console.warn(
-                                'Task skipped due to missing properties:',
-                                task
-                            )
                         }
                     })
                 })
 
-                console.log('Completed tasks by date:', completedTasksByDate)
                 const heatmapData = Object.entries(completedTasksByDate).map(
                     ([date, count]) => ({
-                        userId: 'anonymous',
-                        completionDate: date,
-                        completedTasks: count,
+                        date,
+                        count,
                     })
                 )
-                console.log('heatmap data:', heatmapData)
 
                 setHeatmapData(heatmapData)
             } else {
@@ -296,10 +286,7 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={weekStartDate}
                                             endDate={weekEndDate}
-                                            values={heatmapData.map((d) => ({
-                                                ...d,
-                                                date: d.completionDate,
-                                            }))}
+                                            values={heatmapData}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={getClassForValue}
@@ -307,10 +294,15 @@ const Progress: React.FC = () => {
                                             showMonthLabels={false}
                                             showWeekdayLabels={false}
                                             transformDayElement={(rect) =>
-                                                React.cloneElement(rect, {
-                                                    rx: 2,
-                                                    ry: 2,
-                                                })
+                                                React.cloneElement(
+                                                    rect as React.ReactElement<
+                                                        React.SVGProps<SVGRectElement>
+                                                    >,
+                                                    {
+                                                        rx: 2,
+                                                        ry: 2,
+                                                    }
+                                                )
                                             }
                                         />
                                     </TabsContent>
@@ -319,10 +311,7 @@ const Progress: React.FC = () => {
                                         <CalendarHeatmap
                                             startDate={startDate}
                                             endDate={endDate}
-                                            values={heatmapData.map((d) => ({
-                                                ...d,
-                                                date: d.completionDate,
-                                            }))}
+                                            values={heatmapData}
                                             horizontal={false}
                                             gutterSize={6}
                                             classForValue={getClassForValue}
@@ -330,10 +319,15 @@ const Progress: React.FC = () => {
                                             showMonthLabels={false}
                                             showWeekdayLabels={false}
                                             transformDayElement={(rect) =>
-                                                React.cloneElement(rect, {
-                                                    rx: 2,
-                                                    ry: 2,
-                                                })
+                                                React.cloneElement(
+                                                    rect as React.ReactElement<
+                                                        React.SVGProps<SVGRectElement>
+                                                    >,
+                                                    {
+                                                        rx: 2,
+                                                        ry: 2,
+                                                    }
+                                                )
                                             }
                                         />
                                     </TabsContent>
