@@ -19,6 +19,8 @@ export async function GET() {
                     duration: tasks.duration,
                     goalId: tasks.goalId,
                     goalName: goals.name,
+                    completed: tasks.completed,
+                    completedAt: tasks.completedAt,
                 })
                 .from(tasks)
                 .leftJoin(goals, eq(tasks.goalId, goals.id))
@@ -26,39 +28,47 @@ export async function GET() {
                     and(eq(tasks.userId, user_id), eq(tasks.completed, true))
                 )
 
-            const groupedByGoal = completedTasks.reduce<Record<number, {
-                id: string;
-                title: string;
-                count: number;
-                completions: Array<{
-                    id: number;
-                    name: string;
-                    frequency: string;
-                    duration: string;
-                }>;
-            }>>(
-                (acc, task) => {
-                    const goalId = task.goalId ?? 0
-                    if (!acc[goalId]) {
-                        acc[goalId] = {
-                            id: goalId.toString(),
-                            title: task.goalName ?? 'Ungrouped',
-                            count: 0,
-                            completions: [],
-                        }
+            const groupedByGoal = completedTasks.reduce<
+                Record<
+                    number,
+                    {
+                        id: string
+                        title: string
+                        count: number
+                        completions: Array<{
+                            id: number
+                            name: string
+                            goalId: number | undefined
+                            frequency: string
+                            duration: string
+                            completed: boolean
+                            completedAt: Date | null
+                        }>
                     }
-                    acc[goalId].count += 1
-                    acc[goalId].completions.push({
-                        id: task.taskId,
-                        name: task.taskTitle,
-                        frequency: task.frequency ?? '',
-                        duration: task.duration ?? '',
-                    })
+                >
+            >((acc, task) => {
+                const goalId = task.goalId ?? 0
+                if (!acc[goalId]) {
+                    acc[goalId] = {
+                        id: goalId.toString(),
+                        title: task.goalName ?? 'Ungrouped',
+                        count: 0,
+                        completions: [],
+                    }
+                }
+                acc[goalId].count += 1
+                acc[goalId].completions.push({
+                    id: task.taskId,
+                    name: task.taskTitle,
+                    goalId: task.goalId ?? undefined,
+                    frequency: task.frequency ?? '',
+                    duration: task.duration ?? '',
+                    completed: task.completed ?? true,
+                    completedAt: task.completedAt,
+                })
 
-                    return acc
-                },
-                {}
-            )
+                return acc
+            }, {})
 
             return NextResponse.json(Object.values(groupedByGoal))
         } else {

@@ -19,7 +19,7 @@ interface HeatmapValue {
 interface Completion {
     id: number
     name: string
-    goalId: number | null
+    goalId: number | undefined
     frequency: string
     duration: string
     completed: boolean
@@ -167,7 +167,7 @@ const Progress: React.FC = () => {
                         .map((task) => ({
                             id: task.id,
                             name: task.title,
-                            goalId: task.goalId,
+                            goalId: task.goalId ?? undefined,
                             frequency: task.frequency ?? '',
                             duration: task.duration ?? '',
                             completed: task.completed ?? true,
@@ -239,12 +239,20 @@ const Progress: React.FC = () => {
         setSelectedHabit(habit)
     }
 
+    const handleTaskChanged = () => {
+        fetchHabits()
+        fetchHeatmapData()
+    }
+
     if (selectedHabit) {
+        console.log('habit for completion: ', selectedHabit)
         return (
             <HabitCompletions
+                id={selectedHabit.id}
                 title={selectedHabit.title}
                 completions={selectedHabit.completions}
                 onBack={() => setSelectedHabit(null)}
+                onTaskChanged={handleTaskChanged}
             />
         )
     }

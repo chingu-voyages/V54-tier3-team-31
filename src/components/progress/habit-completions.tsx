@@ -1,52 +1,102 @@
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, MoreHorizontal, Trash } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import FocusTask from '@/components/focus/focus-task'
-import { useTaskManagement } from '@/hooks/useTaskManagement'
-import { useGoalManagement } from '@/hooks/useGoalManagement'
+import { removeTaskFromLocal } from '@/lib/localforage'
+import { deleteTaskForUser } from '@/app/(protected)/app/actions/tasks'
+import { updateTaskCompletionForUser } from '@/app/(protected)/app/actions/tasks'
+import { updateTaskCompletion as updateTaskCompletionLocal } from '@/lib/localforage'
+import { useSession } from 'next-auth/react'
+import React, { useState } from 'react'
 
 interface HabitCompletionsProps {
     id: string
     title: string
-    goalId: number | null
     completions: {
         id: number
         name: string
-        goalId: number | null
+        goalId: number | undefined
         frequency: string
         duration: string
         completed: boolean
         completedAt: Date | null
     }[]
     onBack: () => void
+    onTaskChanged: () => void
 }
 
 const HabitCompletions: React.FC<HabitCompletionsProps> = ({
     title,
     completions,
     onBack,
+    onTaskChanged,
 }) => {
-    const { goals, refreshGoals } = useGoalManagement()
-    const { planTasks, updateTaskCompletion } = useTaskManagement(refreshGoals)
+    const { status } = useSession()
+    const [updatedCompletions, setUpdatedCompletions] = useState(completions)
 
-    const handleTaskComplete = async (taskId: number, completed: boolean) => {
-        console.log(`Toggling task ${taskId} to completed: ${completed}`)
-        const task = [...planTasks, ...goals.flatMap((g) => g.tasks)].find(
-            (t) => t.id === taskId
-        )
-
-        if (!task) {
-            console.error('Task not found for completion update:', taskId)
-            return
-        }
-
+    const handleToggleCompleteTask = async (
+        taskId: number,
+        completed: boolean,
+        goalId: number | undefined
+    ) => {
         try {
-            await updateTaskCompletion(
-                taskId,
-                completed,
-                task.goalId || undefined
+            const newCompletedStatus = !completed
+            const completedAt = newCompletedStatus ? new Date() : null
+
+            if (status === 'authenticated') {
+                await updateTaskCompletionForUser(
+                    taskId,
+                    newCompletedStatus,
+                    completedAt
+                )
+            } else {
+                await updateTaskCompletionLocal(
+                    taskId,
+                    newCompletedStatus,
+                    goalId
+                )
+            }
+            setUpdatedCompletions((prev) =>
+                prev.map((completion) =>
+                    completion.id === taskId
+                        ? {
+                              ...completion,
+                              completed: newCompletedStatus,
+                              completedAt,
+                          }
+                        : completion
+                )
             )
+            onTaskChanged()
         } catch (error) {
-            console.error('Error updating task completion:', error)
+            console.error('Error toggling task completion:', error)
+        }
+    }
+
+    const handleDeleteCompleteTask = async (
+        taskId: number,
+        goalId: number | undefined
+    ) => {
+        try {
+            if (status === 'authenticated') {
+                await deleteTaskForUser(taskId)
+            } else {
+                await removeTaskFromLocal({ taskId, goalId })
+            }
+
+            setUpdatedCompletions((prev) =>
+                prev.filter((completion) => completion.id !== taskId)
+            )
+            onTaskChanged()
+        } catch (error) {
+            console.error('Error deleting task:', error)
         }
     }
 
@@ -65,31 +115,73 @@ const HabitCompletions: React.FC<HabitCompletionsProps> = ({
             {/* Task details */}
             <h4 className="mt-4 text-xl font-semibold">{title}</h4>
             <div className="mt-4 w-full space-y-4">
-                {completions.map((completion) => (
-                    <FocusTask
+                {updatedCompletions.map((completion) => (
+                    <Card
                         key={completion.id}
-                        id={completion.id}
-                        title={completion.name}
-                        frequency={completion.frequency}
-                        duration={completion.duration}
-                        completed={completion.completed}
-                        form={{} as never}
-                        onTaskComplete={() => {
-                            console.log(
-                                'Clicked to toggle:',
-                                completion.id,
-                                !completion.completed
-                            )
-                            handleTaskComplete(
-                                completion.id,
-                                !completion.completed
-                            )
-                        }}
-                        onFrequencyChange={() => {}}
-                        onDurationChange={() => {}}
-                        onDeleteTask={() => {}}
-                        onEditTask={() => {}}
-                    />
+                        className="border-b-[1px] rounded-none mb-2 bg-neutral-900 min-h-[72px] pt-0 pb-3"
+                    >
+                        <div className="w-full">
+                            <div className="flex w-full items-center gap-1.5 text-base text-foreground font-medium">
+                                <Checkbox
+                                    checked={completion.completed}
+                                    onCheckedChange={() =>
+                                        handleToggleCompleteTask(
+                                            completion.id,
+                                            completion.completed,
+                                            completion.goalId
+                                        )
+                                    }
+                                    className={`h-5 w-5 rounded-full hover:cursor-pointer ${
+                                        !completion.completed &&
+                                        'border-neutral-500'
+                                    } data-[state=checked]:!bg-lime-400 data-[state=checked]:!text-slate-900`}
+                                />
+                                <div
+                                    className={`self-stretch my-auto text-neutral-100 text-base font-normal ${
+                                        completion.completed
+                                            ? 'line-through text-zinc-500'
+                                            : ''
+                                    }`}
+                                >
+                                    {completion.name}
+                                </div>
+                            </div>
+                            <div className="flex w-full items-center text-xs text-foreground font-medium justify-between mt-3">
+                                <div className="self-stretch flex items-center gap-4 my-auto">
+                                    <div className="self-stretch border border-border bg-background whitespace-nowrap my-auto px-3 py-1 rounded-md border-solid">
+                                        {completion.frequency}
+                                    </div>
+                                    <div className="self-stretch border border-border bg-background -ml-2 whitespace-nowrap my-auto px-3 py-1 rounded-md border-solid">
+                                        {completion.duration}
+                                    </div>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            className="self-stretch flex items-center gap-1 whitespace-nowrap my-auto"
+                                        >
+                                            <MoreHorizontal />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            className="text-destructive"
+                                            onClick={() =>
+                                                handleDeleteCompleteTask(
+                                                    completion.id,
+                                                    completion.goalId
+                                                )
+                                            }
+                                        >
+                                            <Trash className="mr-2 h-4 w-4 text-red-400" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
+                    </Card>
                 ))}
             </div>
         </div>
