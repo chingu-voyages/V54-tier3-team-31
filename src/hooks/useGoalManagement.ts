@@ -19,12 +19,17 @@ export function useGoalManagement() {
     const [goals, dispatch] = useReducer(goalReducer, []);
     const { status } = useSession(); // Get session status, removed unused 'session'
     const [isInitialized, setIsInitialized] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
+    const [isInitialLoading, setIsInitialLoading] = useState(false);
+    const [isMutating, setIsMutating] = useState(false);
     const pathname = usePathname();
 
     const refreshGoals = useCallback(async () => {
         if (status === 'loading') return;
-        setIsLoading(true); // Set loading true
+        
+        if (!isInitialized) {
+            setIsInitialLoading(true);
+        }
+        
         try {
             let fetchedGoals: GoalWithTasks[] = [];
             if (status === 'authenticated') {
@@ -45,9 +50,11 @@ export function useGoalManagement() {
             toast.error("Failed to load goals.");
              setIsInitialized(true); // Mark as initialized even on error
         } finally {
-            setIsLoading(false); // Set loading false in finally block
+            if (!isInitialized) {
+                setIsInitialLoading(false);
+            }
         }
-    }, [status]);
+    }, [status, isInitialized]);
 
     useEffect(() => {
          console.log("useGoalManagement useEffect triggered. Status:", status);
@@ -62,9 +69,11 @@ export function useGoalManagement() {
              toast.info("Waiting for session status...");
              return;
          }
+         
+         setIsMutating(true);
         try {
             if (status === 'authenticated') {
-                await addGoalForUser(values);
+                await addGoalForUser(values, pathname === "/focus");
                  await refreshGoals(); // Refresh from DB
              } else if (status === 'unauthenticated') {
                  // Removed unused tempId generation
@@ -80,6 +89,8 @@ export function useGoalManagement() {
         } catch (error) {
             console.error("Error adding goal:", error);
             toast.error(`Failed to add goal: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -89,6 +100,9 @@ export function useGoalManagement() {
              toast.info("Waiting for session status...");
              return;
          }
+         
+         setIsMutating(true);
+         
         try {
             if (status === 'authenticated') {
                 await editGoalForUser(id, values); // Server action updates fields passed in 'values'
@@ -107,6 +121,8 @@ export function useGoalManagement() {
         } catch (error) {
             console.error("Error editing goal:", error);
             toast.error(`Failed to update goal: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -117,6 +133,9 @@ export function useGoalManagement() {
              toast.info("Waiting for session status...");
              return;
          }
+         
+         setIsMutating(true);
+         
         try {
             if (status === 'authenticated') {
                 await deleteGoalForUser(id);
@@ -132,6 +151,8 @@ export function useGoalManagement() {
         } catch (error) {
             console.error("Error deleting goal:", error);
             toast.error(`Failed to delete goal: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -152,7 +173,8 @@ export function useGoalManagement() {
         deleteGoal,
         refreshGoals,
         isInitialized,
-        isLoading, // Return isLoading
+        isInitialLoading,
+        isMutating,
         optimisticToggleTaskFocusInGoal
     }
 }

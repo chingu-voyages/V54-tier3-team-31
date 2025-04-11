@@ -61,7 +61,7 @@ export async function getGoalsForUser(): Promise<GoalWithTasks[]> {
 }
 
 
-export async function addGoalForUser(values: GoalFormValues): Promise<Goal> {
+export async function addGoalForUser(values: GoalFormValues, isInFocus: boolean): Promise<Goal> {
     const session = await auth()
     if (!session?.user?.id) throw new Error('Not authenticated')
     const userId = session.user.id;
@@ -93,8 +93,8 @@ export async function addGoalForUser(values: GoalFormValues): Promise<Goal> {
         duration: '5 mins', // Default task duration
         createdAt: new Date(),
         updatedAt: new Date(),
-        isInFocus: false,
         completed: false,
+        isInFocus,
     });
 
     revalidatePath('/app')
