@@ -32,11 +32,16 @@ export function useTaskManagement(
     const { status } = useSession() // Get session status, removed unused 'session'
     const pathname = usePathname()
     const [isInitialized, setIsInitialized] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
+    const [isInitialLoading, setIsInitialLoading] = useState(false);
+    const [isMutating, setIsMutating] = useState(false);
 
     const refreshTasks = useCallback(async () => {
         if (status === 'loading') return; // Don't do anything while loading
-        setIsLoading(true); // Set loading true
+        
+        if (!isInitialized) {
+            setIsInitialLoading(true);
+        }
+        
         try {
             let tasks: Task[] = [];
             if (status === 'authenticated') {
@@ -61,9 +66,11 @@ export function useTaskManagement(
             toast.error("Failed to load tasks.");
              setIsInitialized(true); // Mark as initialized even on error to prevent infinite loops
         } finally {
-            setIsLoading(false); // Set loading false in finally block
+            if (!isInitialized) {
+                setIsInitialLoading(false);
+            }
         }
-    }, [status]); // Depend on session status
+    }, [status, isInitialized]); // Added isInitialized as dependency
 
     useEffect(() => {
         console.log("useTaskManagement useEffect triggered. Status:", status);
@@ -73,6 +80,8 @@ export function useTaskManagement(
     const addTask = async (values: z.infer<typeof TaskFormSchema>, goalId?: number) => {
         const isInFocus = pathname === '/focus';
         let newTaskId: number | undefined;
+        
+        setIsMutating(true);
 
         try {
             if (status === 'authenticated') {
@@ -121,6 +130,8 @@ export function useTaskManagement(
             console.error("Error adding task:", error);
             toast.error(`Failed to add task: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -130,6 +141,9 @@ export function useTaskManagement(
              toast.info("Waiting for session status...");
              return;
          }
+         
+         setIsMutating(true);
+         
         try {
             if (status === 'authenticated') {
                 await editTaskForUser(id, values, goalId);
@@ -156,6 +170,8 @@ export function useTaskManagement(
         } catch (error) {
             console.error("Error editing task:", error);
             toast.error(`Failed to update task: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -164,6 +180,9 @@ export function useTaskManagement(
              toast.info("Waiting for session status...");
              return;
          }
+         
+         setIsMutating(true);
+         
         try {
             if (status === 'authenticated') {
                 await deleteTaskForUser(taskId); // Server action handles deletion
@@ -189,6 +208,8 @@ export function useTaskManagement(
         } catch (error) {
             console.error("Error deleting task:", error);
             toast.error(`Failed to delete task: ${error instanceof Error ? error.message : String(error)}`);
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -199,6 +220,8 @@ export function useTaskManagement(
              return;
          }
          const newFocusState = !currentFocusState;
+
+         setIsMutating(true);
 
          // --- Optimistic UI Update --- 
          // Dispatch differently based on whether it's a plan task or goal task
@@ -245,6 +268,8 @@ export function useTaskManagement(
                      toast.error('Failed to revert local focus state. Please refresh.');
                  }
              }
+         } finally {
+             setIsMutating(false);
          }
      };
 
@@ -254,6 +279,8 @@ export function useTaskManagement(
             toast.info("Waiting for session status...");
             return;
         }
+
+        setIsMutating(true);
 
         const originalTask = planTasks.find(t => t.id === taskId);
         const originalCompleted = originalTask?.completed ?? !completed; // Best guess for revert
@@ -310,6 +337,8 @@ export function useTaskManagement(
                  }
             }
             // Note: No state revert needed for authenticated, relies on refresh/revalidation
+        } finally {
+            setIsMutating(false);
         }
     };
 
@@ -322,6 +351,7 @@ export function useTaskManagement(
         updateTaskCompletion,
         refreshTasks,
         isInitialized,
-        isLoading, // Return isLoading
+        isInitialLoading, // Renamed from isLoading
+        isMutating, // New state for mutation operations
     }
 }
