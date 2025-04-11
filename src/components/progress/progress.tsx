@@ -19,8 +19,11 @@ interface HeatmapValue {
 interface Completion {
     id: number
     name: string
+    goalId: number | null
     frequency: string
     duration: string
+    completed: boolean
+    completedAt: Date | null
 }
 
 interface Habit {
@@ -128,10 +131,15 @@ const Progress: React.FC = () => {
 
                 setHeatmapData(heatmapData)
             } else {
-                const transformedData = data.data?.map((item: { completionDate: string; completedTasks: string }) => ({
-                    date: item.completionDate,
-                    count: parseInt(item.completedTasks, 10),
-                }))
+                const transformedData = data.data?.map(
+                    (item: {
+                        completionDate: string
+                        completedTasks: string
+                    }) => ({
+                        date: item.completionDate,
+                        count: parseInt(item.completedTasks, 10),
+                    })
+                )
 
                 setHeatmapData(transformedData)
             }
@@ -159,8 +167,11 @@ const Progress: React.FC = () => {
                         .map((task) => ({
                             id: task.id,
                             name: task.title,
+                            goalId: task.goalId,
                             frequency: task.frequency ?? '',
                             duration: task.duration ?? '',
+                            completed: task.completed ?? true,
+                            completedAt: task.completedAt,
                         })),
                 }))
 
