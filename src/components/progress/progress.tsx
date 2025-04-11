@@ -128,7 +128,12 @@ const Progress: React.FC = () => {
 
                 setHeatmapData(heatmapData)
             } else {
-                setHeatmapData(data.data)
+                const transformedData = data.data.map((item: any) => ({
+                    date: item.completionDate,
+                    count: parseInt(item.completedTasks, 10),
+                }))
+
+                setHeatmapData(transformedData)
             }
         } catch (error) {
             console.error('Error fetching heatmap data:', error)
