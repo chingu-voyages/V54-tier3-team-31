@@ -1,22 +1,8 @@
 import { NextResponse } from 'next/server'
-import { drizzle } from 'drizzle-orm/neon-http'
-import { neon } from '@neondatabase/serverless'
 import { auth } from '@/lib/auth'
-import * as dotenv from 'dotenv'
-
-dotenv.config()
-
-const sql = neon(process.env.DATABASE_URL!)
-const db = drizzle(sql)
-
-import { pgTable, text, date } from 'drizzle-orm/pg-core'
+import { db } from '@/lib/db/db'
 import { eq } from 'drizzle-orm'
-
-const heatmapStatisticsView = pgTable('heatmap_statistics', {
-    userId: text('user_id').notNull(),
-    completionDate: date('completion_date').notNull(),
-    completedTasks: text('completed_tasks').notNull(),
-})
+import { heatmapStatisticsView } from '@/lib/db/schema'
 
 export async function GET() {
     const session = await auth()
