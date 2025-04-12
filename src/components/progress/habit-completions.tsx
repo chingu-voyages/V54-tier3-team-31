@@ -8,7 +8,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import FocusTask from '@/components/focus/focus-task'
 import { removeTaskFromLocal } from '@/lib/localforage'
 import { deleteTaskForUser } from '@/app/(protected)/app/actions/tasks'
 import { updateTaskCompletionForUser } from '@/app/(protected)/app/actions/tasks'
