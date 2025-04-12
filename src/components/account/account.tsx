@@ -66,9 +66,7 @@ const Account: React.FC = () => {
                             </div>
                             <Button
                                 className="rounded-[6px] text-neutral-50 font-medium text-sm border-neutral-700 border bg-neutral-900"
-                                onClick={() => signOut({
-                                    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/account`
-                                })} // Log out the user
+                                onClick={() => signOut()} // Log out the user
                             >
                                 Logout
                             </Button>
