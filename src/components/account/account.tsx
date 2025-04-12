@@ -36,10 +36,6 @@ const Account: React.FC = () => {
         },
     ]
 
-    const handleSignIn = async () => {
-        await signIn('google')
-    }
-
     return (
         <div className="min-h-screen flex flex-col px-[15px] md:px-0 pb-16 md:pb-0 md:max-w-3xl md:mx-auto md:w-full pt-4 md:pt-8 ">
             {/* Login/Logout Section */}
@@ -89,7 +85,9 @@ const Account: React.FC = () => {
                             </p>
                             <Button
                                 className="rounded-[6px] text-zinc-900 font-medium text-sm"
-                                onClick={handleSignIn}
+                                onClick={() => {
+                                    signIn('google')
+                                }}
                             >
                                 Login with Google
                             </Button>
