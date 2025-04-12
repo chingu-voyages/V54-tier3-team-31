@@ -1,8 +1,12 @@
 'use client'
 
 import { goalReducer } from "@/lib/reducers" // Corrected path
-// Removed unused localforage functions: saveGoalsToLocal, removeGoalFromLocal, editGoalInLocal
-import { getAllGoalsFromLocal } from "@/lib/localforage" // Corrected path
+import { 
+    getAllGoalsFromLocal, 
+    saveGoalsToLocal, 
+    removeGoalFromLocal, 
+    editGoalInLocal 
+} from "@/lib/localforage" // Import all necessary localforage functions
 import { useReducer, useEffect, useCallback, useState } from "react";
 import { useSession } from 'next-auth/react'; // Import useSession
 import { GoalFormValues, GoalWithTasks } from "@/lib/types/types" // Corrected path
@@ -22,6 +26,16 @@ export function useGoalManagement() {
     const [isInitialLoading, setIsInitialLoading] = useState(false);
     const [isMutating, setIsMutating] = useState(false);
     const pathname = usePathname();
+
+    // Effect to persist goals to localForage whenever they change (for unauthenticated users)
+    useEffect(() => {
+        if (isInitialized && status === 'unauthenticated' && goals.length > 0) {
+            console.log("Persisting goals to localForage:", goals);
+            saveGoalsToLocal(goals).catch(error => {
+                console.error("Error saving goals to localForage:", error);
+            });
+        }
+    }, [goals, isInitialized, status]);
 
     const refreshGoals = useCallback(async () => {
         if (status === 'loading') return;
@@ -82,13 +96,10 @@ export function useGoalManagement() {
          }
 
          setIsMutating(true);
-         // Generate temporary ID for optimistic update
-         // Note: Reducer generates the ID, so we don't strictly need tempGoalId here for revert
-         // unless the reducer doesn't handle revert well.
-         // const tempGoalId = Date.now() + Math.floor(Math.random() * 1000);
          let newGoalServer: GoalWithTasks | undefined;
+         let newGoalId: number | undefined;
 
-         // --- Optimistic UI Update --- (Reducer handles state and localForage)
+         // --- Optimistic UI Update --- (Reducer handles state update)
          dispatch({
              type: 'added',
              values,
@@ -98,11 +109,27 @@ export function useGoalManagement() {
         try {
             if (status === 'authenticated') {
                 newGoalServer = await addGoalForUser(values, pathname === "/focus");
-                 // Refresh from DB to get the real ID and confirm state
-                 await refreshGoals(); // Keep refresh on success
+                // Refresh from DB to get the real ID and confirm state
+                await refreshGoals(); // Keep refresh on success
+                newGoalId = newGoalServer?.id;
             } else if (status === 'unauthenticated') {
-                 // Reducer handles localForage update for 'added' type
-                 // No explicit refresh needed here as reducer updates state
+                // For unauthenticated users, we need to:
+                // 1. Get the current updated state
+                const currentGoals = await getAllGoalsFromLocal();
+                
+                // 2. Find the newly added goal (it should be the last one added)
+                const newGoal = currentGoals.find(goal => 
+                    goal.name === values.name && 
+                    !goal.id.toString().includes('-') // Avoid picking up server IDs if any
+                );
+                
+                if (newGoal) {
+                    newGoalId = newGoal.id;
+                    console.log("New goal added locally with ID:", newGoalId);
+                    
+                    // 3. Explicitly save the updated state to localForage
+                    await saveGoalsToLocal(currentGoals);
+                }
             } else {
                 toast.info("Waiting for session status...");
                 // --- Revert Optimistic Update --- (Rely on refresh as fallback)
@@ -110,16 +137,13 @@ export function useGoalManagement() {
                 throw new Error("Session status is loading"); // Throw to prevent success toast
             }
             toast.success("Goal added successfully!");
-            // Return server ID if available, otherwise rely on reducer's generated ID (which might be temp)
-            return newGoalServer?.id; // Return only server ID if available
+            return newGoalId; // Return goal ID
         } catch (error) {
             console.error("Error adding goal:", error);
             if (!(error instanceof Error && error.message === "Session status is loading")) {
                 toast.error(`Failed to add goal: ${error instanceof Error ? error.message : String(error)}`);
             }
             // --- Revert Optimistic Update on Error --- (Rely on refresh)
-            // Reverting 'added' via 'deleted' is complex if the temp ID isn't tracked.
-            // Refreshing is a safer fallback for now.
             await refreshGoals();
         } finally {
             setIsMutating(false);
@@ -143,7 +167,7 @@ export function useGoalManagement() {
              // Add other fields if necessary
          } : values; // Fallback if original not found
 
-         // --- Optimistic UI Update --- (Reducer handles state and localForage)
+         // --- Optimistic UI Update --- (Reducer handles state update)
          dispatch({
              type: 'edited',
              id,
@@ -155,8 +179,8 @@ export function useGoalManagement() {
                 await editGoalForUser(id, values); // Server action updates fields passed in 'values'
                 await refreshGoals(); // Keep refresh on success
             } else if (status === 'unauthenticated') {
-                // Reducer handles localForage update for 'edited' type
-                // No explicit refresh needed here
+                // For unauthenticated users, explicitly update in localForage
+                await editGoalInLocal(id, values);
             } else {
                  toast.info("Waiting for session status...");
                  // --- Revert Optimistic Update --- (Dispatch original values)
@@ -185,8 +209,6 @@ export function useGoalManagement() {
         }
     }
 
-    // Removed editBestTime as it's merged into editGoal
-
     const deleteGoal = async (id: number) => {
          if (status === 'loading') {
              toast.info("Waiting for session status...");
@@ -196,7 +218,7 @@ export function useGoalManagement() {
          setIsMutating(true);
          const originalGoal = goals.find(g => g.id === id);
 
-         // --- Optimistic UI Update --- (Reducer handles state and localForage)
+         // --- Optimistic UI Update --- (Reducer handles state update)
          dispatch({
              id,
              type: 'deleted',
@@ -207,12 +229,11 @@ export function useGoalManagement() {
                 await deleteGoalForUser(id);
                 await refreshGoals(); // Keep refresh on success
             } else if (status === 'unauthenticated') {
-                // Reducer handles localForage update for 'deleted' type
-                // No explicit refresh needed here
+                // For unauthenticated users, explicitly delete from localForage
+                await removeGoalFromLocal(id);
             } else {
                  toast.info("Waiting for session status...");
                  // --- Revert Optimistic Update --- (Rely on refresh as fallback)
-                 // Reverting delete via 'added' is complex, refresh is safer
                  await refreshGoals();
                  throw new Error("Session status is loading");
             }
