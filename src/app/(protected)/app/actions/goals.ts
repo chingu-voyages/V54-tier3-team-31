@@ -8,6 +8,9 @@ import { eq, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { addTaskForUser } from './tasks'; // Import addTaskForUser
 
+// Export the Goal type
+export type { Goal };
+
 // Type guard to check if an object is GoalWithTasks
 // Refined to avoid 'any' cast if possible
 function isGoalWithTasks(goal: unknown): goal is GoalWithTasks {
@@ -61,13 +64,12 @@ export async function getGoalsForUser(): Promise<GoalWithTasks[]> {
 }
 
 
-export async function addGoalForUser(values: GoalFormValues, isInFocus: boolean): Promise<Goal> {
+export async function addGoalForUser(values: GoalFormValues, isInFocus: boolean): Promise<GoalWithTasks> { // Changed return type to GoalWithTasks
     const session = await auth()
     if (!session?.user?.id) throw new Error('Not authenticated')
     const userId = session.user.id;
 
     // Create the goal first
-    // Remove properties not present in GoalFormValues (description, startDate, endDate, frequency)
     const [insertedGoal] = await db.insert(goals).values({
         name: values.name,
         bestTimeTitle: values.bestTimeTitle,
@@ -82,25 +84,28 @@ export async function addGoalForUser(values: GoalFormValues, isInFocus: boolean)
         frequency: 'Daily', // Default frequency
     }).returning();
 
-    const newGoal = insertedGoal; // Assign the inserted goal
-
     // Add the default task associated with the new goal
-    await db.insert(tasks).values({
+    const [insertedTask] = await db.insert(tasks).values({
         title: 'Review and plan your goal steps', // Default task title
         userId: userId,
-        goalId: newGoal.id, // Use the ID of the newly created goal
+        goalId: insertedGoal.id, // Use the ID of the newly created goal
         frequency: 'Once', // Default task frequency
         duration: '5 mins', // Default task duration
         createdAt: new Date(),
         updatedAt: new Date(),
         completed: false,
         isInFocus,
-    });
+    }).returning();
 
     revalidatePath('/app')
     revalidatePath('/plans')
     revalidatePath('/focus') // Revalidate focus in case goal tasks appear there
-    return newGoal; // Return the created goal
+
+    // Return the goal with the newly created task included
+    return {
+        ...insertedGoal,
+        tasks: [insertedTask] // Include the task in the tasks array
+    };
 }
 
  export async function editGoalForUser(goalId: number, values: Partial<GoalFormValues>): Promise<void> {
@@ -160,5 +165,6 @@ export async function addTaskToGoalForUser(values: TaskFormValues, goalId: numbe
     // addTaskForUser already handles revalidation
     return newTask;
 }
+
 
 // Add other goal-related server actions if needed
