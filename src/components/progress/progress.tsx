@@ -10,7 +10,7 @@ import CalendarHeatmap from 'react-calendar-heatmap'
 import 'react-calendar-heatmap/dist/styles.css'
 import { Tooltip } from 'react-tooltip'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
-import { getAllGoalsFromLocal } from '@/lib/localforage'
+import { getAllGoalsFromLocal, getAllPLanTasksFromLocal } from '@/lib/localforage' // Import getAllPLanTasksFromLocal
 
 interface HeatmapValue {
     date: string
@@ -97,13 +97,19 @@ const Progress: React.FC = () => {
 
             if (data.message) {
                 const localGoals = await getAllGoalsFromLocal()
+                const localPlanTasks = await getAllPLanTasksFromLocal() // Fetch plan tasks
                 console.log(
                     'Fetched localGoals:',
                     JSON.stringify(localGoals, null, 2)
                 )
+                console.log( // Log plan tasks
+                    'Fetched localPlanTasks:',
+                    JSON.stringify(localPlanTasks, null, 2)
+                )
 
                 const completedTasksByDate: Record<string, number> = {}
 
+                // Process tasks from goals
                 localGoals.forEach((goal) => {
                     goal.tasks.forEach((task) => {
                         if (task.completed && task.completedAt) {
@@ -122,6 +128,24 @@ const Progress: React.FC = () => {
                         }
                     })
                 })
+
+                // Process plan tasks
+                localPlanTasks.forEach((task) => {
+                    if (task.completed && task.completedAt) {
+                        const date =
+                            task.completedAt instanceof Date
+                                ? task.completedAt
+                                : new Date(task.completedAt)
+                        if (!isNaN(date.getTime())) {
+                            const formattedDate = date
+                                .toISOString()
+                                .split('T')[0]
+                            completedTasksByDate[formattedDate] =
+                                (completedTasksByDate[formattedDate] || 0) + 1
+                        }
+                    }
+                })
+
 
                 const heatmapData = Object.entries(completedTasksByDate).map(
                     ([date, count]) => ({
@@ -152,15 +176,17 @@ const Progress: React.FC = () => {
     // Fetch completed habit data from the database
     const fetchHabits = async () => {
         try {
-            const response = await fetch('/api/progress')
-            const data = await response.json()
+            const response = await fetch('/api/progress');
+            const data = await response.json();
 
             if (data.message) {
                 // Fetch data client-side for anonymous users
-                const localGoals = await getAllGoalsFromLocal()
+                const localGoals = await getAllGoalsFromLocal();
+                const localPlanTasks = await getAllPLanTasksFromLocal(); // Fetch plan tasks
 
-                const groupedByGoal = localGoals.map((goal) => ({
-                    id: goal.id.toString(),
+                // Process goals into habits
+                const goalHabits = localGoals.map((goal) => ({
+                    id: `goal-${goal.id}`, // Ensure unique IDs
                     title: goal.name,
                     count: goal.tasks.filter((task) => task.completed).length,
                     completions: goal.tasks
@@ -174,18 +200,47 @@ const Progress: React.FC = () => {
                             completed: task.completed ?? true,
                             completedAt: task.completedAt,
                         })),
-                }))
+                }));
 
-                setHabits(groupedByGoal)
-                setLoading(false)
+                // Process completed plan tasks into a single "Plan Tasks" habit
+                const completedPlanTasks = localPlanTasks.filter(task => task.completed);
+                let planTaskHabit: Habit | null = null;
+
+                if (completedPlanTasks.length > 0) {
+                    planTaskHabit = {
+                        id: 'plan-tasks', // Unique ID for plan tasks habit
+                        title: 'General Plan Tasks',
+                        count: completedPlanTasks.length,
+                        completions: completedPlanTasks.map((task) => ({
+                            id: task.id,
+                            name: task.title,
+                            goalId: undefined, // Plan tasks don't have a goalId
+                            frequency: task.frequency ?? '',
+                            duration: task.duration ?? '',
+                            completed: task.completed ?? true,
+                            completedAt: task.completedAt,
+                        })),
+                    };
+                }
+
+                // Combine goal habits and the plan task habit (if it exists)
+                const combinedHabits = [...goalHabits];
+                if (planTaskHabit) {
+                    combinedHabits.push(planTaskHabit);
+                }
+
+                setHabits(combinedHabits);
+                setLoading(false);
             } else {
-                setHabits(data)
-                setLoading(false)
+                // Assuming API returns data in the Habit format directly for logged-in users
+                setHabits(data);
+                setLoading(false);
             }
         } catch (error) {
-            console.error('Error fetching progress data:', error)
+            console.error('Error fetching progress data:', error);
+            setLoading(false); // Ensure loading stops on error
         }
-    }
+    };
 
     useEffect(() => {
         fetchHabits()
