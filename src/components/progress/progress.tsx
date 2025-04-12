@@ -20,8 +20,11 @@ interface HeatmapValue {
 interface Completion {
     id: number
     name: string
+    goalId: number | undefined
     frequency: string
     duration: string
+    completed: boolean
+    completedAt: Date | null
 }
 
 interface Habit {
@@ -129,10 +132,15 @@ const Progress: React.FC = () => {
 
                 setHeatmapData(heatmapData)
             } else {
-                const transformedData = data.data?.map((item: { completionDate: string; completedTasks: string }) => ({
-                    date: item.completionDate,
-                    count: parseInt(item.completedTasks, 10),
-                }))
+                const transformedData = data.data?.map(
+                    (item: {
+                        completionDate: string
+                        completedTasks: string
+                    }) => ({
+                        date: item.completionDate,
+                        count: parseInt(item.completedTasks, 10),
+                    })
+                )
 
                 setHeatmapData(transformedData)
             }
@@ -160,8 +168,11 @@ const Progress: React.FC = () => {
                         .map((task) => ({
                             id: task.id,
                             name: task.title,
+                            goalId: task.goalId ?? undefined,
                             frequency: task.frequency ?? '',
                             duration: task.duration ?? '',
+                            completed: task.completed ?? true,
+                            completedAt: task.completedAt,
                         })),
                 }))
 
@@ -229,12 +240,20 @@ const Progress: React.FC = () => {
         setSelectedHabit(habit)
     }
 
+    const handleTaskChanged = () => {
+        fetchHabits()
+        fetchHeatmapData()
+    }
+
     if (selectedHabit) {
+        console.log('habit for completion: ', selectedHabit)
         return (
             <HabitCompletions
+                id={selectedHabit.id}
                 title={selectedHabit.title}
                 completions={selectedHabit.completions}
                 onBack={() => setSelectedHabit(null)}
+                onTaskChanged={handleTaskChanged}
             />
         )
     }
