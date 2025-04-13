@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+
 import tsconfigPaths from 'vite-tsconfig-paths';
 import * as dotenv from 'dotenv';
 
@@ -10,7 +11,6 @@ dotenv.config();
 export default defineConfig(({ mode }) => {
 	// Load env variables
 	const env = loadEnv(mode, process.cwd(), '');
-	
 	return {
 		plugins: [react(), tsconfigPaths()],
 		test: {
@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
 			},
 			globals: true,
 			environment: 'jsdom',
+			setupFiles: ['./tests/setup.ts'],
 			coverage: {
 				include: [
 					'src/components/**',
