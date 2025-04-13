@@ -216,7 +216,6 @@ export function useGoalManagement() {
          }
 
          setIsMutating(true);
-         const originalGoal = goals.find(g => g.id === id);
 
          // --- Optimistic UI Update --- (Reducer handles state update)
          dispatch({
