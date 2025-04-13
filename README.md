@@ -89,13 +89,19 @@ Before getting started with V54-tier3-team-31, ensure your runtime environment m
 2. Then paste it in `.env`, run this to generate a migrations 
 
 ```sh
- npx drizzle-kit generate
+pnpm db:generate
 ```
 
 3. lastly run migrates
 
 ```sh
-npx drizzle-kit migrate
+pnpm db:migrate
+```
+
+alternatively that's better
+
+```sh
+pnpm db:push
 ```
 
 4. optionally you could run the seed command to populate your database
@@ -104,6 +110,7 @@ npx drizzle-kit migrate
 pnpm run db:seed
 ```
 ****
+
 So no. 2 and 3 are the prominent commands to remember
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
