@@ -5,6 +5,7 @@ import {
     GoalState,
     TaskState,
     GoalWithTasks,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     TaskFormValues, // Import TaskFormValues
 } from '@/lib/types/types'
 import { TaskAction } from '@/lib/types/types'
@@ -96,6 +97,7 @@ export function planTaskReducer(state: TaskState, action: TaskAction): TaskState
         default: { // Added braces for block scope
              // Enforce that all action types are handled
              const exhaustiveCheck: never = action;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
              throw new Error(`Unhandled action type: ${(exhaustiveCheck as any).type}`);
         }
     }
@@ -247,6 +249,7 @@ export function goalReducer(state: GoalState, action: GoalAction): GoalState { /
          }
         default: { // Added braces for block scope
              const exhaustiveCheck: never = action;
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
              throw new Error(`Unhandled action type: ${(exhaustiveCheck as any).type}`);
         }
     }

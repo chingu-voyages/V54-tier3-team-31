@@ -28,6 +28,7 @@ import {
 // Define the type for the optional optimistic toggle function
 type OptimisticGoalToggleFn = (goalId: number, taskId: number, newFocusState: boolean) => void;
 // Define type for goal update callback
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OnTaskInGoalUpdatedFn = (actionType: 'added' | 'edited' | 'deleted' | 'completion' | 'focus', data?: any) => Promise<void>;
 
 // Helper function to generate temporary numeric ID
@@ -40,6 +41,7 @@ export function useTaskManagement(
     optimisticGoalToggle?: OptimisticGoalToggleFn
     ) {
     const [planTasks, dispatch] = useReducer(planTaskReducer, [])
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: session, status } = useSession();
     const pathname = usePathname()
     const [isInitialized, setIsInitialized] = useState(false);
