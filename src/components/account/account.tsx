@@ -1,13 +1,12 @@
-'use client'
-
 import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { auth } from '@/lib/auth'
+import { signInAction, signOutAction } from '@/lib/auth.actions.ts'
 
-const Account: React.FC = () => {
-    const { data: session, status } = useSession()
+const Account: React.FC = async () => {
+    const session = await auth()
 
     const teamMembers = [
         {
@@ -41,7 +40,7 @@ const Account: React.FC = () => {
             {/* Login/Logout Section */}
             <Card className="mt-8 bg-neutral-900 rounded-[6px] border-neutral-700 border py-6 px-6 md:px-3">
                 <CardContent className="px-0 flex flex-col gap-3">
-                    {status === 'authenticated' ? (
+                    {session?.user ? (
                         // Logout Section
                         <>
                             <div className="flex items-center gap-3 py-[1.5px]">
@@ -64,12 +63,14 @@ const Account: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <Button
-                                className="rounded-[6px] text-neutral-50 font-medium text-sm border-neutral-700 border bg-neutral-900"
-                                onClick={() => signOut()} // Log out the user
-                            >
-                                Logout
-                            </Button>
+                            <form action={signOutAction}>
+                                <Button
+                                    type="submit"
+                                    className="rounded-[6px] text-neutral-50 font-medium text-sm border-neutral-700 border bg-neutral-900 w-full"
+                                >
+                                    Logout
+                                </Button>
+                            </form>
                         </>
                     ) : (
                         // Login Section
@@ -83,14 +84,14 @@ const Account: React.FC = () => {
                                 Access your progress anytime and stay on top of
                                 your achievements!
                             </p>
-                            <Button
-                                className="rounded-[6px] text-zinc-900 font-medium text-sm"
-                                onClick={()=> {
-                                    signIn('google')
-                                }}
-                            >
-                                Login with Google
-                            </Button>
+                            <form action={signInAction}>
+                                <Button
+                                    type="submit"
+                                    className="rounded-[6px] text-zinc-900 font-medium text-sm w-full"
+                                >
+                                    Login with Google
+                                </Button>
+                            </form>
                         </>
                     )}
                 </CardContent>
