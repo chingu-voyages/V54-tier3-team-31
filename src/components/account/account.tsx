@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { auth } from '@/lib/auth'
-import { signInAction, signOutAction } from '@/lib/auth.actions.ts'
+import { signInAction, signOutAction } from '@/lib/auth.actions'
 
 const Account: React.FC = async () => {
     const session = await auth()
