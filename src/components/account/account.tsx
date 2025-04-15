@@ -48,7 +48,7 @@ const Account: React.FC = () => {
                                 <Image
                                     src={
                                         session?.user?.image ||
-                                        '/default-avatar.png'
+                                        '/profile.jpeg'
                                     }
                                     alt="Avatar"
                                     width={43}
