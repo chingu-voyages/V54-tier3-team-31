@@ -5,12 +5,14 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import TextareaAutosize from 'react-textarea-autosize'; // Import the autosize component
 import { generateGoalsFromInput } from "@/app/(protected)/app/actions";
 import { saveGoalsToLocal, getAllGoalsFromLocal } from "@/lib/localforage";
 import { useRouter } from "next/navigation";
+import {motion} from 'motion/react'
+import { Textarea } from "../ui/textarea";
 
 const goalSchema = z.object({
   goal: z.string().min(1, "Please enter your goal."),
@@ -143,13 +145,21 @@ export default function MyGoalPage() {
                 </button>
               </Link>
 
-              <Button
-                type="submit"
-                className="mt-6 h-14 w-full bg-white text-black text-base font-medium hover:bg-gray-200"
-                disabled={isLoading || isCustomizing}
+              <motion.div
+                className="mt-6 w-full"
+                
+                initial={{ width: 'auto' }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 0.5 }}
               >
-                {isLoading ? "Creating Tasks..." : "Create Tasks"}
-              </Button>
+                <Button
+                  type="submit"
+                  className="h-14 w-full bg-white text-black text-base font-medium hover:bg-gray-200"
+                  disabled={isLoading || isCustomizing}
+                >
+                  {isLoading ? "Creating Tasks..." : "Create Tasks"}
+                </Button>
+              </motion.div>
             </div>
           </form>
         </div>
@@ -157,3 +167,33 @@ export default function MyGoalPage() {
     </div>
   );
 }
+const AnimatedTextarea = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void }) => {
+  const [displayText, setDisplayText] = useState('');
+  const words = value.split(' ');
+  
+  useEffect(() => {
+    // Only run on initial render
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex < words.length) {
+        setDisplayText(prev => prev + ' ' + words[currentIndex]);
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 100); // Adjust timing as needed
+
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array means this only runs once on mount
+
+  return (
+    <Textarea
+      value={displayText || value} // Use displayText for animation, fallback to value
+      onChange={onChange}
+      className="min-h-[100px]"
+      placeholder="Enter your goal description..."
+    />
+  );
+};
+
+
