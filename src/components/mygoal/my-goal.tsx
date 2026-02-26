@@ -21,6 +21,7 @@ type GoalFormValues = z.infer<typeof goalSchema>;
 export default function MyGoalPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomizing, setIsCustomizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -36,6 +37,7 @@ export default function MyGoalPage() {
   const onSubmit = async (data: GoalFormValues) => {
     try {
       setIsLoading(true);
+      setError(null);
       const goalsWithTasks = await generateGoalsFromInput(data.goal)
       
       // Get existing goals to determine the next available ID
@@ -69,8 +71,9 @@ export default function MyGoalPage() {
       // Save the combined goals
       await saveGoalsToLocal(combinedGoals);
       router.push("plans");
-    } catch (error) {
-      console.error("Error generating goals:", error);
+    } catch (err) {
+      console.error("Error generating goals:", err);
+      setError("Failed to generate goals. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -113,6 +116,7 @@ export default function MyGoalPage() {
               )}
             />
             {errors.goal && <p className="text-red-500 text-sm">{errors.goal.message}</p>}
+            {error && <p className="text-red-500 text-sm">{error}</p>}
 
             <div className="flex flex-col items-center space-y-4">
               <Link href="/plans" passHref onClick={() => setIsCustomizing(true)}>
